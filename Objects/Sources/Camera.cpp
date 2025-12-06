@@ -1,6 +1,6 @@
 #include "Objects/Headers/Camera.h"
 
-const glm::vec3 Camera::m_up = glm::vec3(0.0f, 1.0f, 0.0f);
+
 
 glm::mat4 Camera::getProjectionMatrix()
 {
@@ -24,6 +24,17 @@ void Camera::setCameraDirection(float yaw, float pitch)
 
 
 	m_direction = glm::normalize(m_direction);
+	m_right = glm::normalize(glm::cross(m_up, m_direction));
+}
+
+glm::vec3 Camera::getRightVector() const
+{
+	return m_right;
+}
+
+glm::vec3 Camera::getUpVector() const
+{
+	return m_up;
 }
 
 void Camera::processKeyboardInput(GLFWwindow* window, float deltaTime)
@@ -110,7 +121,7 @@ glm::vec3 Camera::getPosition() const
 
 glm::vec3 Camera::getDirection() const
 {
-	return m_direction;
+	return glm::normalize(m_direction);
 }
 
 

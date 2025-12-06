@@ -1,20 +1,6 @@
 #include "Core/Headers/Entity.h"
 
 
-void Entity::setRotation(Vec3f axis, float angle)
-{
-	m_currentRotationAxis = axis;
-	m_currentRotationAngle = angle;
-}
-
-void Entity::imguiDraw()
-{
-
-	ImGui::DragFloat3("Position", &m_position.x, 0.5f);
-	ImGui::DragFloat3("Rotation Axis", &m_currentRotationAxis.x, 0.1f);
-	ImGui::DragFloat("Angle", &m_currentRotationAngle);
-
-}
 
 MeshEntity::MeshEntity(const std::shared_ptr<Mesh> mesh, const std::shared_ptr<Material> material)
 {

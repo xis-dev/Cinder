@@ -23,3 +23,4 @@ void Scene::illuminate(const std::shared_ptr<Shader>& shader)
 	}
 }
 
+

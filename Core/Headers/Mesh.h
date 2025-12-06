@@ -19,7 +19,6 @@ public:
 
 	std::vector<Vertex> m_vertices{};
 	std::vector<unsigned int> m_indices{};
-	std::vector<Texture> m_textures{};
 	std::string tag{};
 	unsigned int vao, vbo, ebo{};
 

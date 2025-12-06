@@ -72,8 +72,7 @@ set(SOURCES
         Core/Sources/MaterialInstance.cpp
         Core/Sources/Mesh.cpp
         Core/Sources/Entity.cpp
-        Core/Sources/Components.cpp
-        Core/Headers/Components.h
+        
         ${GLAD_DIR}/glad.c
         ${STB_DIR}/stb.cpp
 )

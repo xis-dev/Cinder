@@ -24,10 +24,10 @@ public:
 	Texture(GLuint id, std::string path, Type texType) : ID(id), m_path(std::move(path)), type(texType){}
 
 
-	Texture(const char* fileName, Type texType = Type::Diffuse, bool flipOnLoad = true, GLenum wrapType = GL_REPEAT, GLuint desiredFormat = GL_RGBA);
-	static unsigned int loadTextureFile(const char* filePath, Type texType = Type::Diffuse, bool flipOnLoad = true, GLenum wrapType = GL_REPEAT, GLuint desiredFormat = GL_RGBA);
+	Texture(const std::string& fileName, Type texType = Type::Diffuse, bool flipOnLoad = true, GLenum wrapType = GL_REPEAT, GLuint desiredFormat = GL_RGBA);
+	static unsigned int loadTextureFile(const std::string& filePath, Type texType = Type::Diffuse, bool flipOnLoad = true, GLenum wrapType = GL_REPEAT, GLuint desiredFormat = GL_RGBA);
 
-	static GLuint loadTextureFile(const char* relativePath, const std::string& directory, Type texType = Type::Diffuse, bool flipOnLoad = true, GLenum wrapType = GL_REPEAT, GLuint desiredFormat = GL_RGBA);
+	static GLuint loadTextureFile(const std::string& relativePath, const std::string& directory, Type texType = Type::Diffuse, bool flipOnLoad = true, GLenum wrapType = GL_REPEAT, GLuint desiredFormat = GL_RGBA);
 	void bind();
 	static void unbind(GLenum activeTexUnit);
 

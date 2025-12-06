@@ -71,7 +71,7 @@ uniform vec3 u_CameraPosition;
 
 uniform vec3 u_ViewDirection;
 
-Material u_Material = Material(vec3(1.0, 1.0, 1.0), 1.0, 1.0, 0.5, 32);
+uniform Material u_Material;
 
 out vec4 FragColor;
 
@@ -118,8 +118,8 @@ void main()
 
 
 vec3 calcDirLights(DirectionalLight light, Material mat, vec3 normal, vec3 fragToViewDirection, vec3 fragPosition) {
-	vec3 ambient = mat.ambient * light.color;
 
+    vec3 ambient = mat.ambient * light.color;
 	vec3 lightDir = normalize(light.direction);
 	vec3 diffuse = max(dot(normal, -lightDir), 0.0) * mat.diffuse * light.color;
 
@@ -132,7 +132,6 @@ vec3 calcDirLights(DirectionalLight light, Material mat, vec3 normal, vec3 fragT
 
 vec3 calcPointLights(PointLight light, Material mat, vec3 normal, vec3 fragToViewDirection, vec3 fragPosition) {
 
-	vec3 ambient = mat.ambient * light.color;
 
 	vec3 fragDirectionToLight = normalize(vec3(light.position - fragPosition));
 	float distanceToLight = length(light.position - fragPosition);
@@ -144,16 +143,14 @@ vec3 calcPointLights(PointLight light, Material mat, vec3 normal, vec3 fragToVie
 
 	float attenuatedIntensity = 1 / (light.constant + (light.linear * distanceToLight) + (light.quadratic * (distanceToLight * distanceToLight)));
 
-	ambient *= attenuatedIntensity;
 	diffuse *= attenuatedIntensity;
 	specular *= attenuatedIntensity;
 
-	return (ambient + diffuse + specular) * light.intensity;
+	return (diffuse + specular) * light.intensity;
 }
 
 vec3 calcSpotLights(SpotLight light, Material mat, vec3 normal, vec3 fragToViewDirection, vec3 fragPosition) {
 
-	vec3 ambient = mat.ambient * light.color;
 
 	vec3 fragDirectionToLight = normalize(vec3(light.position - fragPosition));
 	vec3 diffuse = mat.diffuse * max(dot(fragDirectionToLight, normal), 0.0) * light.color;
@@ -166,10 +163,9 @@ vec3 calcSpotLights(SpotLight light, Material mat, vec3 normal, vec3 fragToViewD
 	float epsilon = light.innerCutoff - light.outerCutoff;
 	float attenuatedIntensity = clamp(((theta - light.outerCutoff) / epsilon), 0.0, 1.0);
 
-	ambient *= attenuatedIntensity;
 	diffuse *= attenuatedIntensity;
 	specular *= attenuatedIntensity;
 
-	return (ambient + diffuse + specular) * light.intensity;
+	return (diffuse + specular) * light.intensity;
 
 }

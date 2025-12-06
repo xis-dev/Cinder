@@ -6,7 +6,7 @@
 #include "Math/Math.h"
 
 
-Texture::Texture(const char* fileName , Texture::Type texType, bool flipOnLoad,
+Texture::Texture(const std::string& fileName , Texture::Type texType, bool flipOnLoad,
                  GLenum wrapType,GLuint desiredFormat): type(texType)
 {
 	ID = loadTextureFile(fileName, texType, flipOnLoad, wrapType, desiredFormat);
@@ -14,7 +14,7 @@ Texture::Texture(const char* fileName , Texture::Type texType, bool flipOnLoad,
 }
 
 
-unsigned int Texture::loadTextureFile(const char* filePath, Type texType, bool flipOnLoad, GLenum wrapType,
+unsigned int Texture::loadTextureFile(const std::string& filePath, Type texType, bool flipOnLoad, GLenum wrapType,
 	GLuint desiredFormat)
 {
 	unsigned int id{};
@@ -72,12 +72,12 @@ unsigned int Texture::loadTextureFile(const char* filePath, Type texType, bool f
 	return id;
 }
 
-GLuint Texture::loadTextureFile(const char* relativePath, const std::string& directory, Type texType, bool flipOnLoad,
+GLuint Texture::loadTextureFile(const std::string& relativePath, const std::string& directory, Type texType, bool flipOnLoad,
 	GLenum wrapType, GLuint desiredFormat)
 {
 	std::string fullPath = FileManager::getPath(relativePath, directory);
 
-	GLuint id = loadTextureFile(fullPath.c_str(), texType, flipOnLoad, wrapType, desiredFormat);
+	GLuint id = loadTextureFile(fullPath, texType, flipOnLoad, wrapType, desiredFormat);
 
 	return id;
 }

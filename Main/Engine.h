@@ -17,7 +17,9 @@
 #include "Math/Vec3.h"
 
 #include "Shapes/Headers/Floor.h"
+#include "Core/IconRegistry.h"
 #include "Main/Scene.h"
+#include <memory>
 
 #define PRINTAPI(x) std::cout << #x << std::endl;
 
@@ -57,11 +59,13 @@ private:
 public:
 
 	unsigned gridVao = 0;
+	unsigned iconVao = 0;
 
-	std::map<std::string, std::shared_ptr<Shader>> shaders;
-	std::map<std::string, std::shared_ptr<Texture>> textures;
-	std::map<std::string, std::shared_ptr<Material>> materials;
-	std::map<std::string, std::shared_ptr<Mesh>> meshes;
+
+	std::unordered_map<std::string, std::shared_ptr<Shader>> shaders;
+	std::unordered_map<std::string, std::shared_ptr<Texture>> textures;
+	std::unordered_map<std::string, std::shared_ptr<Material>> materials;
+	std::unordered_map<std::string, std::shared_ptr<Mesh>> meshes;
 
 	Scene m_currentScene;
 
@@ -84,13 +88,17 @@ public:
 
 	static void imguiRender();
 	void renderGrid();
+	void renderIcons();
 
 	void createTextures();
 	void createShaders();
 	void createMeshes();			   
 	void createMaterials();
 
+	void createObjectIcons();
+
 	void createGrid();
+	void createIconVAO();
 	void createFloor();
 	void createSpotLight();
 

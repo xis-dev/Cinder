@@ -144,23 +144,24 @@ vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffus
 vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex) {
 
 	vec3 lightDir = normalize(light.position - v_WorldPos);
+
 	float diff = max(dot(normal, lightDir), 0.0);
+	
 	vec3 reflectDir = normalize(reflect(-lightDir, normal));
 	vec3 fragToViewDirection = normalize(u_CameraPosition - v_WorldPos);
-	float spec = pow(max(dot(fragToViewDirection, reflectDir), 0.0), u_Material.shininess);
-	float dist = length(light.position - v_WorldPos);
-	float attenuation = 1.0 / (light.constant + light.linear * dist +
-	light.quadratic * (dist * dist));
-	// combine results
 
-	vec3 ambient  = u_Material.ambient  * diffuseTex * light.color;
+	float dist = length(light.position - v_WorldPos);
+
+	float spec = pow(max(dot(fragToViewDirection, reflectDir), 0.0), u_Material.shininess);
+	float attenuation = 1.0 / (light.constant + light.linear * dist + light.quadratic * (dist * dist));
+						
 	vec3 diffuse  = u_Material.diffuse  * diff * diffuseTex * light.color;
 	vec3 specular = u_Material.specular * spec * specularTex * light.color;
-	ambient  *= attenuation;
+
 	diffuse  *= attenuation;
 	specular *= attenuation;
-	vec3 result = (ambient + diffuse + specular ) * light.intensity;
-	if (light.constant < 1.0f || light.linear == 0) {result = vec3(0.2, 1.0, 0.5);}
+
+	vec3 result = (diffuse + specular ) * light.intensity;
 	return result;
 
 }
@@ -168,7 +169,6 @@ vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex
 vec3 calcSpotLight(SpotLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex) {
 
 
-	vec3 ambient = diffuseTex * u_Material.ambient * light.color;
 
 	vec3 lightDir = normalize(light.position - v_WorldPos);
 	float diff = max(dot(lightDir, normal), 0.0);
@@ -182,11 +182,10 @@ vec3 calcSpotLight(SpotLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, 
 	float epsilon = light.innerCutoff - light.outerCutoff;
 	float attenuation = clamp(((theta - light.outerCutoff)/epsilon), 0.0, 1.0);
 
-	ambient *= attenuation;
 	diffuse *= attenuation;
 	specular *= attenuation;
 
-	return   (ambient + diffuse + specular ) * light.intensity;
+	return   (diffuse + specular ) * light.intensity;
 }
 
 float linearizeDepth(float depth) 

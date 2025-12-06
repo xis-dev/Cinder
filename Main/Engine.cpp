@@ -104,6 +104,8 @@ void Engine::init(GLFWwindow*& window)
 	createMeshes();
 	createMaterials();
 
+	createObjectIcons();
+
 	createGrid();
 
 
@@ -138,7 +140,7 @@ void Engine::init(GLFWwindow*& window)
 void Engine::sRendering()
 {
 	// Tell opengl what color we want glClear to clear the color buffer
-	glClearColor(0.72f, 0.38f, 0.0f, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	 // Clear color and depth buffers
 
 
@@ -161,7 +163,7 @@ void Engine::sRendering()
 
 		m_currentScene.illuminate(shader);
 		m_currentScene.applyLightCountsToShader(shader);
-
+		
 		shader->setUniformVec3("u_CameraPosition", cameraPosition);
 		shader->setUniformMat4("u_ProjectionMatrix", projectionMat);
 		shader->setUniformMat4("u_ViewMatrix", viewMat);
@@ -172,22 +174,18 @@ void Engine::sRendering()
 
 		for (auto& entity : m_currentScene.getEntities())
 		{
+			
 			shader->setUniformMat4("u_MVPMatrix", vpMat * entity->getTransformMatrix());
 			entity->render(shader);
 		}
 	}
 
+	glClear(GL_DEPTH_BUFFER_BIT);
+	renderIcons();
+
 
 }
 
-void Engine::sLighting()
-{
-	for (auto &shader: shaders | std::views::values)
-	{
-		
-	}
-
-}
 
 void Engine::sInput()
 {
@@ -233,7 +231,7 @@ void Engine::imguiUse()
 	entityNames.reserve(m_currentScene.getEntities().size());
 	for (auto& e : m_currentScene.getEntities())
 	{
-		entityNames.push_back(e->tag.c_str());
+		entityNames.push_back(e->getTag());
 	}
 
 	std::vector<const char*> materialNames{};
@@ -334,6 +332,38 @@ void Engine::renderGrid()
 	glBindVertexArray(0);
 }
 
+void Engine::renderIcons()
+{
+	glm::mat4 view = camera.getViewMatrix();
+	glm::mat4 projection = camera.getProjectionMatrix();
+
+	for (auto& entity : m_currentScene.getEntities())
+	{
+		if (entity->hasIcon())
+		{
+			// Remove rotation from view matrix for billboard
+			glm::mat4 modelMat = glm::translate(glm::mat4(1.0f),
+				glm::vec3(entity->getPosition().x,
+					entity->getPosition().y,
+					entity->getPosition().z));
+
+			glm::mat4 viewNoRotation = glm::mat4(1.0f);
+			viewNoRotation[3] = view[3];
+
+			shaders["icon"]->use();
+			shaders["icon"]->setUniformMat4("u_ModelMatrix", modelMat);
+			shaders["icon"]->setUniformMat4("u_ViewMatrix", viewNoRotation);
+			shaders["icon"]->setUniformMat4("u_ProjectionMatrix", projection);
+			glActiveTexture(GL_TEXTURE0);
+			entity->getIcon()->bind();
+			shaders["icon"]->setUniformi("u_iconImage", 0);
+			glBindVertexArray(iconVao);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+			glBindVertexArray(0);
+		}
+	}
+}
+
 
 void Engine::createTextures()
 {
@@ -352,6 +382,7 @@ void Engine::createShaders()
 	shaders["unlit"] = std::make_shared<Shader>("Shaders/default.vert", "Shaders/default_unlit.frag");
 	shaders["textured_lit"] = Shader::getTexturedShader();
 	shaders["grid"] = std::make_shared<Shader>("Shaders/world_grid.vert", "Shaders/world_grid.frag");
+	shaders["icon"] = std::make_shared<Shader>("Shaders/item_icon.vert", "Shaders/item_icon.frag");
 }
 
 void Engine::createMeshes()
@@ -373,12 +404,30 @@ void Engine::createMaterials()
 	materials["container"]->addTexture(textures["container_specular"]);
 }
 
+void Engine::createObjectIcons()
+{
+	glGenVertexArrays(1, &iconVao);
+	glBindVertexArray(iconVao);
+	glBindVertexArray(0);
+
+
+	IconRegistry::registerType<DirectionalLight>("Textures/light-icon.png");
+	IconRegistry::registerType<PointLight>("Textures/light-icon.png");
+	IconRegistry::registerType<SpotLight>("Textures/light-icon.png");
+
+}
+
 void Engine::createGrid()
 {
 	glGenVertexArrays(1, &gridVao);
 	glBindVertexArray(gridVao);
 	glBindVertexArray(0);
 
+}
+
+void Engine::createIconVAO()
+{
+	
 }
 
 void Engine::createFloor()
