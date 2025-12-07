@@ -1,5 +1,7 @@
 #include "Main/Engine.h"
 #include <ranges>
+#include <Shader.h>
+#include <Resources/ResourceManager.h>
 
 
 GLFWwindow* Engine::m_window{};
@@ -39,7 +41,6 @@ void Engine::run()
 
 		imguiUse();
 		sInput();
-		sLighting();
 		sRendering();
 
 		imguiRender();
@@ -106,7 +107,7 @@ void Engine::init(GLFWwindow*& window)
 
 	createObjectIcons();
 
-	createGrid();
+	initializeAddonVAO();
 
 
 	//loadModel("C:/Users/PC/Downloads/backpack/backpack.obj", "Bag", "lit", Vec3f(0.0f, 1.0f, 7.0f));
@@ -158,28 +159,29 @@ void Engine::sRendering()
 	glm::mat4 projectionMat = camera.getProjectionMatrix();
 	glm::mat4 viewMat = camera.getViewMatrix();
 	glm::mat4 vpMat = projectionMat * viewMat;
-	for (auto& [name, shader] : shaders)
-	{
 
-		m_currentScene.illuminate(shader);
-		m_currentScene.applyLightCountsToShader(shader);
-		
-		shader->setUniformVec3("u_CameraPosition", cameraPosition);
-		shader->setUniformMat4("u_ProjectionMatrix", projectionMat);
-		shader->setUniformMat4("u_ViewMatrix", viewMat);
-		shader->setUniformMat4("u_VPMatrix", vpMat);
-
-		shader->setUniformi("u_cullBackface", cullBackface);
-		shader->setUniformVec3("u_ViewDirection", camera.getDirection());
-
-		for (auto& entity : m_currentScene.getEntities())
+		for (auto& [name, shader] : ResourceManager<Shader>::getAllResources())
 		{
-			
-			shader->setUniformMat4("u_MVPMatrix", vpMat * entity->getTransformMatrix());
-			entity->render(shader);
-		}
-	}
+			m_currentScene.illuminate(shader);
+			m_currentScene.applyLightCountsToShader(shader);
 
+			shader->setUniformVec3("u_CameraPosition", cameraPosition);
+			shader->setUniformMat4("u_ProjectionMatrix", projectionMat);
+			shader->setUniformMat4("u_ViewMatrix", viewMat);
+			shader->setUniformMat4("u_VPMatrix", vpMat);
+
+			shader->setUniformi("u_cullBackface", cullBackface);
+			shader->setUniformVec3("u_ViewDirection", camera.getDirection());
+
+			for (auto& entity : m_currentScene.getEntities())
+			{
+
+				shader->setUniformMat4("u_MVPMatrix", vpMat * entity->getTransformMatrix());
+				entity->render(shader);
+			}
+		}
+
+	
 	glClear(GL_DEPTH_BUFFER_BIT);
 	renderIcons();
 
@@ -235,10 +237,13 @@ void Engine::imguiUse()
 	}
 
 	std::vector<const char*> materialNames{};
-	for (const auto &key: materials | std::views::keys)
-	{
-		materialNames.push_back(key.c_str());
-	}
+	
+		for (const auto& key : ResourceManager<Material>::getAllResources() | std::views::keys)
+		{
+			materialNames.push_back(key.c_str());
+		}
+
+	
 
 	ImGui::Begin("Linking ts broke my ass");
 
@@ -264,7 +269,7 @@ void Engine::imguiUse()
 			ImGui::Combo("Materials", &materialIndex, materialNames.data(), static_cast<int>(materialNames.size()));
 			if (materialIndex >= 0)
 			{
-				std::shared_ptr<Material> currentMaterial = materials[materialNames[materialIndex]];
+				std::shared_ptr<Material> currentMaterial = ResourceManager<Material>::getResource(materialNames[materialIndex]);
 				static float materialColor[3]{};
 				static float ambientStr{};
 				static float diffuseStr{};
@@ -324,12 +329,12 @@ void Engine::imguiRender()
 
 void Engine::renderGrid()
 {
-	shaders["grid"]->use();
-	shaders["grid"]->setUniformMat4("u_VPMatrix", (camera.getProjectionMatrix() * camera.getViewMatrix()));
-	shaders["grid"]->setUniformVec3("u_CameraPosition", camera.getPosition());
-	glBindVertexArray(gridVao);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glBindVertexArray(0);
+	auto gridShader = ResourceManager<Shader>::getResource("grid");
+	gridShader->use();
+	gridShader->setUniformMat4("u_VPMatrix", (camera.getProjectionMatrix() * camera.getViewMatrix()));
+	gridShader->setUniformVec3("u_CameraPosition", camera.getPosition());
+	
+	drawAddon(6);
 }
 
 void Engine::renderIcons()
@@ -337,79 +342,89 @@ void Engine::renderIcons()
 	glm::mat4 view = camera.getViewMatrix();
 	glm::mat4 projection = camera.getProjectionMatrix();
 
+	auto iconShader = ResourceManager<Shader>::getResource("icon");
+	iconShader->use();
+	iconShader->setUniformMat4("u_ViewMatrix", view);
+	iconShader->setUniformMat4("u_ProjectionMatrix", projection);
+
+	glm::vec3 cameraRightWorldSpace = glm::vec3{ view[0][0], view[1][0], view[2][0] };
+	glm::vec3 cameraUpWorldSpace = glm::vec3{ view[0][1], view[1][1], view[2][1] };
+	iconShader->setUniformVec3("u_CameraRight_WorldSpace", cameraRightWorldSpace);
+
+	iconShader->setUniformVec3("u_CameraUp_WorldSpace", cameraUpWorldSpace);
+
 	for (auto& entity : m_currentScene.getEntities())
 	{
 		if (entity->hasIcon())
 		{
-			// Remove rotation from view matrix for billboard
-			glm::mat4 modelMat = glm::translate(glm::mat4(1.0f),
-				glm::vec3(entity->getPosition().x,
-					entity->getPosition().y,
-					entity->getPosition().z));
+			iconShader->use();
 
-			glm::mat4 viewNoRotation = glm::mat4(1.0f);
-			viewNoRotation[3] = view[3];
+			iconShader->setUniformVec3("u_ObjectPosition", (glm::vec3)entity->getPosition());
 
-			shaders["icon"]->use();
-			shaders["icon"]->setUniformMat4("u_ModelMatrix", modelMat);
-			shaders["icon"]->setUniformMat4("u_ViewMatrix", viewNoRotation);
-			shaders["icon"]->setUniformMat4("u_ProjectionMatrix", projection);
 			glActiveTexture(GL_TEXTURE0);
-			entity->getIcon()->bind();
-			shaders["icon"]->setUniformi("u_iconImage", 0);
-			glBindVertexArray(iconVao);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-			glBindVertexArray(0);
+			entity->getIcon()->use();
+			iconShader->setUniformi("u_iconImage", 0);
+			drawAddon(6);
 		}
 	}
+}
+
+void Engine::drawAddon(int indexCount)
+{
+	glBindVertexArray(addonVAO);
+	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)indexCount);
+	glBindVertexArray(0);
 }
 
 
 void Engine::createTextures()
 {
-	textures["default"] = std::make_shared<Texture>("Textures/empty.jpg");
-	textures["aphex"] = std::make_shared<Texture>("Textures/aphex.gif");
-	textures["floor"] = std::make_shared<Texture>("Textures/woodenFloor.jpg");
-
-	textures["container"] = std::make_shared<Texture>("Textures/container_diffuse.png");
-	textures["container_specular"] = std::make_shared<Texture>("Textures/container_specular.png",Texture::Specular);
+	ResourceManager<Texture>::addResource("default", std::make_shared<Texture>("Textures/empty.jpg"));
+	ResourceManager<Texture>::addResource("aphex", std::make_shared<Texture>("Textures/aphex.gif"));
+	ResourceManager<Texture>::addResource("floor", std::make_shared<Texture>("Textures/woodenFloor.jpg"));
+	ResourceManager<Texture>::addResource("container", std::make_shared<Texture>("Textures/container_diffuse.png"));
+	ResourceManager<Texture>::addResource("container_specular", std::make_shared<Texture>("Textures/container_specular.png", Texture::Specular));
 }
 
 
 void Engine::createShaders()
 {
-	shaders["lit"] = Shader::getDefaultShader();
-	shaders["unlit"] = std::make_shared<Shader>("Shaders/default.vert", "Shaders/default_unlit.frag");
-	shaders["textured_lit"] = Shader::getTexturedShader();
-	shaders["grid"] = std::make_shared<Shader>("Shaders/world_grid.vert", "Shaders/world_grid.frag");
-	shaders["icon"] = std::make_shared<Shader>("Shaders/item_icon.vert", "Shaders/item_icon.frag");
+	ResourceManager<Shader>::addResource("lit", Shader::getDefaultShader());
+	ResourceManager<Shader>::addResource("unlit", std::make_shared<Shader>("Shaders/default.vert", "Shaders/default_unlit.frag"));
+	ResourceManager<Shader>::addResource("textured_lit", Shader::getTexturedShader());
+	ResourceManager<Shader>::addResource("grid", std::make_shared<Shader>("Shaders/world_grid.vert", "Shaders/world_grid.frag"));
+	ResourceManager<Shader>::addResource("icon", std::make_shared<Shader>("Shaders/item_icon.vert", "Shaders/item_icon.frag"));
 }
 
 void Engine::createMeshes()
 {
-	meshes["cube"] = std::make_shared<Mesh>(Cube::vertices, Cube::indices);
-	meshes["cube"]->tag = "cube";
-	meshes["plane"] = std::make_shared<Mesh>(Floor::vertices, Floor::indices);
-	meshes["plane"]->tag = "plane";
+	ResourceManager<Mesh>::addResource("cube", std::make_shared<Mesh>(Cube::vertices, Cube::indices));
+	ResourceManager<Mesh>::getResource("cube")->tag = "cube";
+	ResourceManager<Mesh>::addResource("plane", std::make_shared<Mesh>(Floor::vertices, Floor::indices));
+	ResourceManager<Mesh>::getResource("plane")->tag = "plane";
+
 }
 
 void Engine::createMaterials()
 {
-	materials["default"] = std::make_shared<Material>(shaders["lit"]);
-	materials["lit"] = std::make_shared<Material>(shaders["textured_lit"]);
-	materials["unlit"] = std::make_shared<Material>(shaders["unlit"]);
-	materials["aphex"] = std::make_shared<Material>(shaders["textured_lit"], textures["aphex"]);
-	materials["floor"] = std::make_shared<Material>(shaders["textured_lit"], textures["floor"]);
-	materials["container"] = std::make_shared<Material>(shaders["textured_lit"], textures["container"]);
-	materials["container"]->addTexture(textures["container_specular"]);
+	ResourceManager<Material>::addResource("default", std::make_shared<Material>(ResourceManager<Shader>::getResource("lit")));
+
+	ResourceManager<Material>::addResource("lit", std::make_shared<Material>(ResourceManager<Shader>::getResource("textured_lit")));
+
+	ResourceManager<Material>::addResource("unlit", std::make_shared<Material>(ResourceManager<Shader>::getResource("unlit")));
+
+	ResourceManager<Material>::addResource("aphex", std::make_shared<Material>(ResourceManager<Shader>::getResource("textured_lit"), 
+		ResourceManager<Texture>::getResource("aphex")));
+
+	ResourceManager<Material>::addResource("floor", std::make_shared<Material>(ResourceManager<Shader>::getResource("textured_lit"), ResourceManager<Texture>::getResource("floor")));
+
+	ResourceManager<Material>::addResource("container", std::make_shared<Material>(ResourceManager<Shader>::getResource("textured_lit"), ResourceManager<Texture>::getResource("container")));
+
+	ResourceManager<Material>::getResource("container")->addTexture(ResourceManager<Texture>::getResource("container_specular"));
 }
 
 void Engine::createObjectIcons()
 {
-	glGenVertexArrays(1, &iconVao);
-	glBindVertexArray(iconVao);
-	glBindVertexArray(0);
-
 
 	IconRegistry::registerType<DirectionalLight>("Textures/light-icon.png");
 	IconRegistry::registerType<PointLight>("Textures/light-icon.png");
@@ -417,10 +432,10 @@ void Engine::createObjectIcons()
 
 }
 
-void Engine::createGrid()
+void Engine::initializeAddonVAO()
 {
-	glGenVertexArrays(1, &gridVao);
-	glBindVertexArray(gridVao);
+	glGenVertexArrays(1, &addonVAO);
+	glBindVertexArray(addonVAO);
 	glBindVertexArray(0);
 
 }
@@ -454,7 +469,7 @@ void Engine::createDirectionalLight(const std::string& name, Vec3f direction)
 void Engine::createCube(const std::string& name, const char* materialName, Vec3f position, float rotationAngle, Vec3f rotationAxis,
                         Vec3f scale)
 {
-	auto* cube = m_currentScene.createEntity<MeshEntity>("Cube", meshes["cube"], materials[materialName]);
+	auto* cube = m_currentScene.createEntity<MeshEntity>("Cube", ResourceManager<Mesh>::getResource("cube"), ResourceManager<Material>::getResource(materialName));
 	cube->setPosition(position);
 	cube->setRotation(rotationAxis, rotationAngle);
 	cube->setScale(scale);

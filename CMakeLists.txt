@@ -56,21 +56,25 @@ set(ALL_DEPENDENCIES_DIRS
     ${imgui_SOURCE_DIR}
     ${assimp_SOURCE_DIR})
 
+set (HEADERS 
+        
+     "Resources/ResourceManager.h"
+ "Resources/Resource.h")
 set(SOURCES
         main.cpp
-        Objects/Sources/Shader.cpp
+        "Resources/Sources/Shader.cpp"
         Objects/Sources/VAO.cpp
         Objects/Sources/VBO.cpp
         Objects/Sources/EBO.cpp
-        Objects/Sources/Texture.cpp
+        "Resources/Sources/Texture.cpp"
         Objects/Sources/Camera.cpp
         Objects/Sources/Light.cpp
         Objects/Sources/Vertex.cpp
         Main/Engine.cpp
         Main/Scene.cpp
-        Core/Sources/Material.cpp
+        "Resources/Sources/Material.cpp"
         Core/Sources/MaterialInstance.cpp
-        Core/Sources/Mesh.cpp
+        "Resources/Sources/Mesh.cpp"
         Core/Sources/Entity.cpp
         
         ${GLAD_DIR}/glad.c
@@ -86,11 +90,30 @@ set(IMGUI_SOURCES
         ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
-add_executable(Cinder ${SOURCES} ${IMGUI_SOURCES})
+
+set(INCLUDE_DIRS_HEADERS 
+         Core/Headers
+         Main/Headers
+         Objects/Headers
+         Resources/Headers
+         Shapes/Headers
+)
+
+set(INCLUDE_DIRS_SOURCES
+         Core/Headers
+         Main/Sources
+         Objects/Sources
+         Resources/Sources
+         Shapes/Sources
+)
+
+add_executable(Cinder ${SOURCES} ${IMGUI_SOURCES} ${HEADERS} )
 
 target_include_directories(Cinder PRIVATE
         ${PROJECT_SOURCE_DIR}
         ${ALL_DEPENDENCIES_DIRS}
+        ${INCLUDE_DIRS_HEADERS}
+        ${INCLUDE_DIRS_SOURCES}
 
         ${imgui_SOURCE_DIR}/backends
 )

@@ -12,14 +12,16 @@
 #include "Objects/Headers/Camera.h"
 #include "Shapes/Headers/Cube.h"
 #include "Core/Headers/Entity.h"
-#include "Core/Headers/Material.h"
-#include "Core/Headers/Mesh.h"
+#include "Resources/Headers/Material.h"
+#include "Resources/Headers/Mesh.h"
 #include "Math/Vec3.h"
 
 #include "Shapes/Headers/Floor.h"
 #include "Core/IconRegistry.h"
 #include "Main/Scene.h"
 #include <memory>
+
+#include "Resources/ResourceManager.h"
 
 #define PRINTAPI(x) std::cout << #x << std::endl;
 
@@ -58,15 +60,11 @@ private:
 
 public:
 
-	unsigned gridVao = 0;
-	unsigned iconVao = 0;
+	// vao used to for drawing scene addons such as the world grid and icons on entities
+	unsigned addonVAO = 0;
 
 
-	std::unordered_map<std::string, std::shared_ptr<Shader>> shaders;
-	std::unordered_map<std::string, std::shared_ptr<Texture>> textures;
-	std::unordered_map<std::string, std::shared_ptr<Material>> materials;
-	std::unordered_map<std::string, std::shared_ptr<Mesh>> meshes;
-
+	
 	Scene m_currentScene;
 
 	static bool cullBackface;
@@ -79,7 +77,6 @@ public:
 	void init(GLFWwindow*& window);
 	// TODO: proper system into class setup
 	void sRendering();
-	void sLighting();
 	void sInput();
 	void deltaTimeUpdate();
 
@@ -90,6 +87,8 @@ public:
 	void renderGrid();
 	void renderIcons();
 
+	void drawAddon(int indexCount);
+
 	void createTextures();
 	void createShaders();
 	void createMeshes();			   
@@ -97,10 +96,9 @@ public:
 
 	void createObjectIcons();
 
-	void createGrid();
+	void initializeAddonVAO();
 	void createIconVAO();
 	void createFloor();
-	void createSpotLight();
 
 	void sendGeneralShaderUniforms();
 

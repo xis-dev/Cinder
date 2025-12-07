@@ -2,7 +2,7 @@
 #include <vector>
 #include "Core/Headers/Entity.h"
 #include "Math/Vec3.h"
-#include <Objects/Headers/Shader.h>
+#include <Resources/Headers/Shader.h>
 #include <memory>
 #include <concepts>
 #include <type_traits>

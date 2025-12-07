@@ -34,7 +34,7 @@ void MeshEntity::render(const std::shared_ptr<Shader>& shader)
 	
 	for (auto& mesh : m_meshes)
 	{
-		mesh->draw();
+		mesh->use();
 	}
 }
 
