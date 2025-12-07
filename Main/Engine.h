@@ -63,6 +63,10 @@ public:
 	// vao used to for drawing scene addons such as the world grid and icons on entities
 	unsigned addonVAO = 0;
 
+	ResourceManager<Shader> shaders{};
+	ResourceManager<Texture> textures{};
+	ResourceManager<Material> materials{};
+	ResourceManager<Mesh> meshes{};
 
 	
 	Scene m_currentScene;

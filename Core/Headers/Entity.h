@@ -22,18 +22,18 @@ class Scene;
 class Entity 
 {
 	static constexpr size_t MAX_NAME_LENGTH = 32;
-
+	
 public:
 	virtual ~Entity() = default;
 
 
 protected:
-	char m_tag[MAX_NAME_LENGTH];
+	char m_tag[MAX_NAME_LENGTH]{};
 	Vec3f m_position{};
 	Vec3f m_currentRotationAxis{Vec3f(0.0f, 1.0f, 0.0f)};
 	float m_currentRotationAngle{};
 
-	std::shared_ptr<Texture> m_icon;
+	Texture* m_icon{};
 	bool m_hasIcon{};
 
 public:
@@ -70,10 +70,10 @@ public:
 		return m_tag;
 	}
 
-	virtual void setIcon(const std::shared_ptr<Texture>& icon)
+	virtual void setIcon(Texture& icon)
 	{
 		m_hasIcon = true;
-		m_icon = icon;
+		m_icon = &icon;
 	}
 
 	bool hasIcon()
@@ -81,8 +81,23 @@ public:
 		return m_hasIcon;
 	}
 
-	const std::shared_ptr<Texture> getIcon()
+	Texture* tryGetIcon()
 	{
+		if (!m_icon)
+		{
+			std::cerr << "ENTITY:: Current entity named: " << m_tag << " has no icon.\n";
+			return nullptr;
+		}
+		return m_icon;
+	}
+
+	const Texture* tryGetIcon() const
+	{
+		if (!m_icon)
+		{
+			std::cerr << "ENTITY:: Current entity named: " << m_tag << " has no icon.\n";
+			return nullptr;
+		}
 		return m_icon;
 	}
 
@@ -105,22 +120,22 @@ public:
 	}
 
 
-	virtual void render(const std::shared_ptr<Shader>& shader) { 
+	virtual void render(const Shader& shader) { 
 		
-		shader->use();
-		shader->setUniformMat4("u_ModelMatrix", getTransformMatrix()); 
+		shader.use();
+		shader.setUniformMat4("u_ModelMatrix", getTransformMatrix()); 
 	}
 };
 
 class MeshEntity : public Entity{
 public:
 	MeshEntity() = default;
-	MeshEntity(const std::shared_ptr<Mesh> mesh, const std::shared_ptr<Material> material);
+	MeshEntity(Mesh& mesh, Material& material);
 
 
 private:
-	std::vector<std::shared_ptr<Mesh>> m_meshes{};
-	std::vector<std::shared_ptr<Material>> m_materials{};
+	std::vector<Mesh*> m_meshes{};
+	std::vector<Material*> m_materials{};
 
 	Vec3f m_scale{1.0f};
 
@@ -131,7 +146,7 @@ public:
 
 	virtual void imguiDraw() override;
 	virtual glm::mat4 getTransformMatrix() override;
-	virtual void render(const std::shared_ptr<Shader>& shader) override;
+	virtual void render(const Shader& shader) override;
 };
 
 class LightEntity : public Entity{
@@ -153,7 +168,7 @@ public:
 	Vec3f getColor() { return m_color; }
 
 	virtual void imguiDraw() override;
-	virtual void use(const std::shared_ptr<Shader>& shader) {};
+	virtual void use(const Shader& shader) {};
 };
 
 class DirectionalLight : public LightEntity {
@@ -166,7 +181,7 @@ public:
 	static int m_lightCountByType;
 
 	virtual void imguiDraw() override;
-	virtual void use(const std::shared_ptr<Shader>& shader) override;
+	virtual void use(const Shader& shader) override;
 	
 };
 
@@ -200,7 +215,7 @@ public:
 	static int m_lightCountByType;
 
 	virtual void imguiDraw() override;
-	virtual void use(const std::shared_ptr<Shader>& shader) override;
+	virtual void use(const Shader& shader) override;
 };
 
 class SpotLight : public LightEntity {
@@ -217,5 +232,5 @@ public:
 	static int m_lightCountByType;
 
 	virtual void imguiDraw() override;
-	virtual void use(const std::shared_ptr<Shader>& shader) override;
+	virtual void use(const Shader& shader) override;
 };

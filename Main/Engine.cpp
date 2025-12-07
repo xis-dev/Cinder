@@ -160,10 +160,10 @@ void Engine::sRendering()
 	glm::mat4 viewMat = camera.getViewMatrix();
 	glm::mat4 vpMat = projectionMat * viewMat;
 
-		for (auto& [name, shader] : ResourceManager<Shader>::getAllResources())
+		for (const auto shader: shaders.getAllResources() | std::views::values)
 		{
-			m_currentScene.illuminate(shader);
-			m_currentScene.applyLightCountsToShader(shader);
+			m_currentScene.illuminate(*shader);
+			m_currentScene.applyLightCountsToShader(*shader);
 
 			shader->setUniformVec3("u_CameraPosition", cameraPosition);
 			shader->setUniformMat4("u_ProjectionMatrix", projectionMat);
@@ -175,9 +175,8 @@ void Engine::sRendering()
 
 			for (auto& entity : m_currentScene.getEntities())
 			{
-
 				shader->setUniformMat4("u_MVPMatrix", vpMat * entity->getTransformMatrix());
-				entity->render(shader);
+				entity->render(*shader);
 			}
 		}
 
@@ -236,12 +235,14 @@ void Engine::imguiUse()
 		entityNames.push_back(e->getTag());
 	}
 
-	std::vector<const char*> materialNames{};
-	
-		for (const auto& key : ResourceManager<Material>::getAllResources() | std::views::keys)
-		{
-			materialNames.push_back(key.c_str());
-		}
+	auto matNames = materials.getAllResourceNames();
+	std::vector<const char*> matNamesPtr{};
+	matNamesPtr.reserve(matNames.size());
+
+	for (auto& s : matNames)
+	{
+		matNamesPtr.push_back(s.c_str());
+	}
 
 	
 
@@ -266,37 +267,40 @@ void Engine::imguiUse()
 		if (ImGui::BeginTabItem("Materials"))
 		{
 			static int materialIndex{};
-			ImGui::Combo("Materials", &materialIndex, materialNames.data(), static_cast<int>(materialNames.size()));
+			ImGui::Combo("Materials", &materialIndex, matNamesPtr.data(), static_cast<int>(matNamesPtr.size()));
 			if (materialIndex >= 0)
 			{
-				std::shared_ptr<Material> currentMaterial = ResourceManager<Material>::getResource(materialNames[materialIndex]);
-				static float materialColor[3]{};
-				static float ambientStr{};
-				static float diffuseStr{};
-				static float specularStr{};
-				static float shininess{};
-
-				ambientStr = currentMaterial->getAmbience();
-				diffuseStr = currentMaterial->getDiffuse();
-				specularStr = currentMaterial->getSpecular();
-				shininess = currentMaterial->getShininess();
-
-				for (int index = 0; index <= 2; ++index)
+				if (Material* currentMaterial = materials.tryGetResource(matNamesPtr[materialIndex]))
 				{
-					materialColor[index] = currentMaterial->getColor()[index];
+					static float materialColor[3]{};
+					static float ambientStr{};
+					static float diffuseStr{};
+					static float specularStr{};
+					static float shininess{};
+
+					ambientStr = currentMaterial->getAmbience();
+					diffuseStr = currentMaterial->getDiffuse();
+					specularStr = currentMaterial->getSpecular();
+					shininess = currentMaterial->getShininess();
+
+					for (int index = 0; index <= 2; ++index)
+					{
+						materialColor[index] = currentMaterial->getColor()[index];
+					}
+
+					ImGui::DragFloat("Ambience", &ambientStr);
+					ImGui::ColorEdit3("Colour", &materialColor[0]);
+					ImGui::DragFloat("Diffuse", &diffuseStr);
+					ImGui::DragFloat("Specular", &specularStr);
+					ImGui::DragFloat("Shininess", &shininess);
+
+					currentMaterial->setColor(Vec3f(materialColor[0], materialColor[1], materialColor[2]));
+					currentMaterial->setDiffuse(diffuseStr);
+					currentMaterial->setAmbience(ambientStr);
+					currentMaterial->setSpecular(specularStr);
+					currentMaterial->setShininess(shininess);
 				}
-
-				ImGui::DragFloat("Ambience", &ambientStr);
-				ImGui::ColorEdit3("Colour", &materialColor[0]);
-				ImGui::DragFloat("Diffuse", &diffuseStr);
-				ImGui::DragFloat("Specular", &specularStr);
-				ImGui::DragFloat("Shininess", &shininess);
-
-				currentMaterial->setColor(Vec3f(materialColor[0], materialColor[1], materialColor[2]));
-				currentMaterial->setDiffuse(diffuseStr);
-				currentMaterial->setAmbience(ambientStr);
-				currentMaterial->setSpecular(specularStr);
-				currentMaterial->setShininess(shininess);
+				
 			}
 			ImGui::EndTabItem();
 		}
@@ -329,12 +333,15 @@ void Engine::imguiRender()
 
 void Engine::renderGrid()
 {
-	auto gridShader = ResourceManager<Shader>::getResource("grid");
-	gridShader->use();
-	gridShader->setUniformMat4("u_VPMatrix", (camera.getProjectionMatrix() * camera.getViewMatrix()));
-	gridShader->setUniformVec3("u_CameraPosition", camera.getPosition());
+	if (auto gridShader = shaders.tryGetResource("grid"))
+	{
+		gridShader->use();
+		gridShader->setUniformMat4("u_VPMatrix", (camera.getProjectionMatrix() * camera.getViewMatrix()));
+		gridShader->setUniformVec3("u_CameraPosition", camera.getPosition());
+
+		drawAddon(6);
+	}
 	
-	drawAddon(6);
 }
 
 void Engine::renderIcons()
@@ -342,31 +349,35 @@ void Engine::renderIcons()
 	glm::mat4 view = camera.getViewMatrix();
 	glm::mat4 projection = camera.getProjectionMatrix();
 
-	auto iconShader = ResourceManager<Shader>::getResource("icon");
-	iconShader->use();
-	iconShader->setUniformMat4("u_ViewMatrix", view);
-	iconShader->setUniformMat4("u_ProjectionMatrix", projection);
-
-	glm::vec3 cameraRightWorldSpace = glm::vec3{ view[0][0], view[1][0], view[2][0] };
-	glm::vec3 cameraUpWorldSpace = glm::vec3{ view[0][1], view[1][1], view[2][1] };
-	iconShader->setUniformVec3("u_CameraRight_WorldSpace", cameraRightWorldSpace);
-
-	iconShader->setUniformVec3("u_CameraUp_WorldSpace", cameraUpWorldSpace);
-
-	for (auto& entity : m_currentScene.getEntities())
+	if (auto iconShader = shaders.tryGetResource("icon"))
 	{
-		if (entity->hasIcon())
+		iconShader->use();
+		iconShader->setUniformMat4("u_ViewMatrix", view);
+		iconShader->setUniformMat4("u_ProjectionMatrix", projection);
+
+		glm::vec3 cameraRightWorldSpace = glm::vec3{ view[0][0], view[1][0], view[2][0] };
+		glm::vec3 cameraUpWorldSpace = glm::vec3{ view[0][1], view[1][1], view[2][1] };
+		iconShader->setUniformVec3("u_CameraRight_WorldSpace", cameraRightWorldSpace);
+
+		iconShader->setUniformVec3("u_CameraUp_WorldSpace", cameraUpWorldSpace);
+
+		for (auto& entity : m_currentScene.getEntities())
 		{
-			iconShader->use();
+			if (entity->hasIcon())
+			{
+				iconShader->use();
 
-			iconShader->setUniformVec3("u_ObjectPosition", (glm::vec3)entity->getPosition());
+				iconShader->setUniformVec3("u_ObjectPosition", (glm::vec3)entity->getPosition());
 
-			glActiveTexture(GL_TEXTURE0);
-			entity->getIcon()->use();
-			iconShader->setUniformi("u_iconImage", 0);
-			drawAddon(6);
+				glActiveTexture(GL_TEXTURE0);
+				entity->tryGetIcon()->use();
+				iconShader->setUniformi("u_iconImage", 0);
+				drawAddon(6);
+			}
 		}
 	}
+	
+	
 }
 
 void Engine::drawAddon(int indexCount)
@@ -379,56 +390,58 @@ void Engine::drawAddon(int indexCount)
 
 void Engine::createTextures()
 {
-	ResourceManager<Texture>::addResource("default", std::make_shared<Texture>("Textures/empty.jpg"));
-	ResourceManager<Texture>::addResource("aphex", std::make_shared<Texture>("Textures/aphex.gif"));
-	ResourceManager<Texture>::addResource("floor", std::make_shared<Texture>("Textures/woodenFloor.jpg"));
-	ResourceManager<Texture>::addResource("container", std::make_shared<Texture>("Textures/container_diffuse.png"));
-	ResourceManager<Texture>::addResource("container_specular", std::make_shared<Texture>("Textures/container_specular.png", Texture::Specular));
+	textures.addResource("default", Texture("Textures/empty.jpg"));
+	textures.addResource("aphex", Texture("Textures/aphex.gif"));
+	textures.addResource("floor", Texture("Textures/woodenFloor.jpg"));
+	textures.addResource("container", Texture("Textures/container_diffuse.png"));
+	textures.addResource("container_specular", Texture("Textures/container_specular.png", Texture::Specular));
 }
 
 
 void Engine::createShaders()
 {
-	ResourceManager<Shader>::addResource("lit", Shader::getDefaultShader());
-	ResourceManager<Shader>::addResource("unlit", std::make_shared<Shader>("Shaders/default.vert", "Shaders/default_unlit.frag"));
-	ResourceManager<Shader>::addResource("textured_lit", Shader::getTexturedShader());
-	ResourceManager<Shader>::addResource("grid", std::make_shared<Shader>("Shaders/world_grid.vert", "Shaders/world_grid.frag"));
-	ResourceManager<Shader>::addResource("icon", std::make_shared<Shader>("Shaders/item_icon.vert", "Shaders/item_icon.frag"));
+	shaders.addResource("lit", Shader("Shaders/default.vert", "Shaders/default_lit.frag"));
+	shaders.addResource("unlit", Shader("Shaders/default.vert", "Shaders/default_unlit.frag"));
+	shaders.addResource("textured_lit", Shader("Shaders/default.vert", "Shaders/textured_lit.frag"));
+	shaders.addResource("grid", Shader("Shaders/world_grid.vert", "Shaders/world_grid.frag"));
+	shaders.addResource("icon", Shader("Shaders/item_icon.vert", "Shaders/item_icon.frag"));
 }
 
 void Engine::createMeshes()
 {
-	ResourceManager<Mesh>::addResource("cube", std::make_shared<Mesh>(Cube::vertices, Cube::indices));
-	ResourceManager<Mesh>::getResource("cube")->tag = "cube";
-	ResourceManager<Mesh>::addResource("plane", std::make_shared<Mesh>(Floor::vertices, Floor::indices));
-	ResourceManager<Mesh>::getResource("plane")->tag = "plane";
+	meshes.addResource("cube", Mesh(Cube::vertices, Cube::indices));
+	meshes.addResource("plane", Mesh(Floor::vertices, Floor::indices));
 
 }
 
 void Engine::createMaterials()
 {
-	ResourceManager<Material>::addResource("default", std::make_shared<Material>(ResourceManager<Shader>::getResource("lit")));
+	materials.addResource("default", Material(shaders.tryGetResource("lit")));
 
-	ResourceManager<Material>::addResource("lit", std::make_shared<Material>(ResourceManager<Shader>::getResource("textured_lit")));
+	materials.addResource("lit", Material(shaders.tryGetResource("textured_lit")));
 
-	ResourceManager<Material>::addResource("unlit", std::make_shared<Material>(ResourceManager<Shader>::getResource("unlit")));
+	materials.addResource("unlit", Material(shaders.tryGetResource("unlit")));
 
-	ResourceManager<Material>::addResource("aphex", std::make_shared<Material>(ResourceManager<Shader>::getResource("textured_lit"), 
-		ResourceManager<Texture>::getResource("aphex")));
+	materials.addResource("aphex", Material(shaders.tryGetResource("textured_lit"), 
+		textures.tryGetResource("aphex")));
 
-	ResourceManager<Material>::addResource("floor", std::make_shared<Material>(ResourceManager<Shader>::getResource("textured_lit"), ResourceManager<Texture>::getResource("floor")));
+	materials.addResource("floor", Material(shaders.tryGetResource("textured_lit"), textures.tryGetResource("floor")));
 
-	ResourceManager<Material>::addResource("container", std::make_shared<Material>(ResourceManager<Shader>::getResource("textured_lit"), ResourceManager<Texture>::getResource("container")));
+	materials.addResource("container", Material(shaders.tryGetResource("textured_lit"), textures.tryGetResource("container")));
 
-	ResourceManager<Material>::getResource("container")->addTexture(ResourceManager<Texture>::getResource("container_specular"));
+
+	materials.tryGetResource("container")->addTexture(*textures.tryGetResource("container_specular"));
 }
 
 void Engine::createObjectIcons()
 {
+	Texture* directionalLightIcon = textures.addResource("icon_directionalLight", Texture("Textures/light-icon.png"));
+	Texture* pointLightIcon = textures.addResource("icon_pointLight", Texture("Textures/light-icon.png"));
+	Texture* spotLightIcon = textures.addResource("icon_spotLight", Texture("Textures/light-icon.png"));
 
-	IconRegistry::registerType<DirectionalLight>("Textures/light-icon.png");
-	IconRegistry::registerType<PointLight>("Textures/light-icon.png");
-	IconRegistry::registerType<SpotLight>("Textures/light-icon.png");
+	IconRegistry::registerType<DirectionalLight>(*directionalLightIcon);
+	IconRegistry::registerType<PointLight>(*pointLightIcon);
+	IconRegistry::registerType<SpotLight>(*spotLightIcon);
 
 }
 
@@ -469,7 +482,7 @@ void Engine::createDirectionalLight(const std::string& name, Vec3f direction)
 void Engine::createCube(const std::string& name, const char* materialName, Vec3f position, float rotationAngle, Vec3f rotationAxis,
                         Vec3f scale)
 {
-	auto* cube = m_currentScene.createEntity<MeshEntity>("Cube", ResourceManager<Mesh>::getResource("cube"), ResourceManager<Material>::getResource(materialName));
+	auto cube = m_currentScene.createEntity<MeshEntity>("Cube", *meshes.tryGetResource("cube"), *materials.tryGetResource(materialName));
 	cube->setPosition(position);
 	cube->setRotation(rotationAxis, rotationAngle);
 	cube->setScale(scale);

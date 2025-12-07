@@ -30,21 +30,20 @@ public:
 		m_entities.push_back(std::move(entity));
 
 		auto* basePtr = m_entities.back().get();
-		T* typedPtr = static_cast<T*>(basePtr);
+		T* typePtr = static_cast<T*>(basePtr);
 		if constexpr (std::is_base_of_v<LightEntity, T>)
 		{
-			m_lights.push_back(static_cast<LightEntity*>(typedPtr));
-			// if m_lightCountByType is static on T:
-			typedPtr->setLightID(T::m_lightCountByType);
+			m_lights.push_back(static_cast<LightEntity*>(typePtr));
+			typePtr->setLightID(T::m_lightCountByType);
 			++T::m_lightCountByType;
 		}
 
-		if (auto icon = IconRegistry::getIcon<T>())
+		if (auto icon = IconRegistry::tryGetIcon<T>())
 		{
-			typedPtr->setIcon(icon);
+			typePtr->setIcon(*icon);
 		}
 
-		return typedPtr;
+		return typePtr;
 	}
 
 		
@@ -53,7 +52,7 @@ public:
 public:
 	
 	void imguiUse(const std::unique_ptr<Entity>& entity);
-	void applyLightCountsToShader(const std::shared_ptr<Shader>& shader);
+	void applyLightCountsToShader(const Shader& shader);
 
 
 	const std::vector<std::unique_ptr<Entity>>& getEntities() const
@@ -66,7 +65,7 @@ public:
 		return m_entities.size();
 	}
 
-	void illuminate(const std::shared_ptr<Shader>& shader);
+	void illuminate(const Shader& shader);
 
 
 };
