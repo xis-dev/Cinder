@@ -346,21 +346,18 @@ void Engine::renderGrid()
 
 void Engine::renderIcons()
 {
-	glm::mat4 view = camera.getViewMatrix();
-	glm::mat4 projection = camera.getProjectionMatrix();
 
 	if (auto iconShader = shaders.tryGetResource("icon"))
 	{
+		glm::mat4 view = camera.getViewMatrix();
 		iconShader->use();
-		iconShader->setUniformMat4("u_ViewMatrix", view);
-		iconShader->setUniformMat4("u_ProjectionMatrix", projection);
 
 		glm::vec3 cameraRightWorldSpace = glm::vec3{ view[0][0], view[1][0], view[2][0] };
 		glm::vec3 cameraUpWorldSpace = glm::vec3{ view[0][1], view[1][1], view[2][1] };
 		iconShader->setUniformVec3("u_CameraRight_WorldSpace", cameraRightWorldSpace);
 
 		iconShader->setUniformVec3("u_CameraUp_WorldSpace", cameraUpWorldSpace);
-
+			
 		for (auto& entity : m_currentScene.getEntities())
 		{
 			if (entity->hasIcon())

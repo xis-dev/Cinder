@@ -103,7 +103,7 @@ public:
 
     static float dot(Vec3 lhs, Vec3 rhs)
     {
-        return ((lhs.x * rhs.x) + (lhs.y * rhs.y), (lhs.z * rhs.z));
+        return ((lhs.x * rhs.x) + (lhs.y * rhs.y) + (lhs.z * rhs.z));
     }
 
     static Vec3 cross(Vec3 lhs, Vec3 rhs)

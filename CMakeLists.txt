@@ -79,7 +79,7 @@ set(SOURCES
         
         ${GLAD_DIR}/glad.c
         ${STB_DIR}/stb.cpp
-)
+ "Core/Sources/LightEntity.cpp" "Core/Sources/MeshEntity.cpp")
 
 set(IMGUI_SOURCES
         ${imgui_SOURCE_DIR}/imgui.cpp
