@@ -56,10 +56,10 @@ set(ALL_DEPENDENCIES_DIRS
     ${imgui_SOURCE_DIR}
     ${assimp_SOURCE_DIR})
 
-set (HEADERS 
-        
+set (HEADERS    
      "Resources/ResourceManager.h"
- "Resources/Resource.h")
+     "Resources/Resource.h"
+     "Core/IconRegistry.h"   )
 set(SOURCES
         main.cpp
         "Resources/Sources/Shader.cpp"
@@ -76,10 +76,11 @@ set(SOURCES
         Core/Sources/MaterialInstance.cpp
         "Resources/Sources/Mesh.cpp"
         Core/Sources/Entity.cpp
+
         
         ${GLAD_DIR}/glad.c
         ${STB_DIR}/stb.cpp
- "Core/Sources/LightEntity.cpp" "Core/Sources/MeshEntity.cpp")
+ "Core/Sources/LightEntity.cpp" "Core/Sources/MeshEntity.cpp" "Resources/Sources/Model.cpp")
 
 set(IMGUI_SOURCES
         ${imgui_SOURCE_DIR}/imgui.cpp

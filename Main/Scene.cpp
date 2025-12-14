@@ -16,7 +16,6 @@ void Scene::applyLightCountsToShader(const Shader& shader)
 
 void Scene::illuminate(const Shader& shader)
 {
-	shader.use();
 	for (auto& light : m_lights)
 	{
 		light->use(shader);

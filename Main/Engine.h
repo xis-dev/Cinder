@@ -21,7 +21,12 @@
 #include "Main/Scene.h"
 #include <memory>
 
+#include "assimp/Importer.hpp"
+#include "assimp/scene.h"
+#include "assimp/postprocess.h"
+
 #include "Resources/ResourceManager.h"
+#include "Core/FileManager.h"
 
 #define PRINTAPI(x) std::cout << #x << std::endl;
 
@@ -63,10 +68,10 @@ public:
 	// vao used to for drawing scene addons such as the world grid and icons on entities
 	unsigned addonVAO = 0;
 
-	ResourceManager<Shader> shaders{};
-	ResourceManager<Texture> textures{};
-	ResourceManager<Material> materials{};
-	ResourceManager<Mesh> meshes{};
+	ResourceManager<Shader> shaders{"S_shaderObject"};
+	ResourceManager<Texture> textures{"T_textureObject"};
+	ResourceManager<Material> materials{"MT_materialObject"};
+	ResourceManager<Mesh> meshes{"M_meshObject"};
 
 	
 	Scene m_currentScene;
@@ -93,6 +98,12 @@ public:
 
 	void drawAddon(int indexCount);
 
+	void loadModel(const std::string& filePath, Material* mat);
+	void processNode(aiNode* node, const aiScene* scene, const std::string& directory, Material* mat);
+	Mesh processMesh(aiMesh* mesh, const aiScene* scene, const std::string& directory, Material* mat);
+	std::vector<Texture*> loadMaterialTextures(aiMaterial* mat, aiTextureType assimp_textureType, Texture::Type textureType, const std::string& directory);
+
+
 	void createTextures();
 	void createShaders();
 	void createMeshes();			   
@@ -104,11 +115,11 @@ public:
 	void createIconVAO();
 	void createFloor();
 
+	void addMeshToScene(Mesh* mesh, Vec3f position);
+
 	void sendGeneralShaderUniforms();
 
 	void createPointLight(const std::string& name, float radius, Vec3f position);
-
-
 
 	void createDirectionalLight(const std::string& name, Vec3f direction);
 
@@ -116,8 +127,11 @@ public:
 	void createCube(const std::string &name = "Cube", const char *materialName = "default", Vec3f position = Vec3(0.0f), float
 	                rotationAngle = 0.0f,
 	                Vec3f rotationAxis = Vec3f(0.0f, 0.0f, 1.0f), Vec3f scale = Vec3f(1.0f));
-	void loadModel(const char* path, const char* tag, const char* materialName = "default", Vec3f position = Vec3f(0.0), Vec3f scale = Vec3f(1.0), float angle = 0, Vec3f
-	               rotAxis = Vec3f(0.0, 0.0, 1.0));
+
+
+
+
+
 
 	static void keyCallback(GLFWwindow* window, int key, int action, int scancode, int mods);
 	static void frameBufferSizeCallback(GLFWwindow* window, int width, int height);

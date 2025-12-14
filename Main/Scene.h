@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
 #include "Core/Headers/Entity.h"
+#include "Core/Headers/LightEntity.h"
+#include "Core/Headers/MeshEntity.h"
 #include "Math/Vec3.h"
 #include <Resources/Headers/Shader.h>
 #include <memory>
@@ -8,19 +10,26 @@
 #include <type_traits>
 #include <Core/IconRegistry.h>
 
-
+class Shader;
 
 class Scene
 {
-public:
-	Scene() = default;;
 
+	struct RenderBatch {
+		Shader* shader;
+		std::vector<MeshEntity*> meshes;
+	};
 public:
+	Scene() = default;
+
+private:
 
 	size_t m_totalEntities{};
 	std::vector<std::unique_ptr<Entity>> m_entities{};
 	std::vector<LightEntity*> m_lights{};
+	std::unordered_map<Shader*, std::vector<MeshEntity*>> m_renderBatches{};
 
+public:
 	template<typename T, typename... TArgs>
 		requires std::derived_from<T, Entity>
 	T* createEntity(const std::string& name, TArgs&&... args)
@@ -30,12 +39,24 @@ public:
 		m_entities.push_back(std::move(entity));
 
 		auto* basePtr = m_entities.back().get();
-		T* typePtr = static_cast<T*>(basePtr);
+		T* typePtr = dynamic_cast<T*>(basePtr);
 		if constexpr (std::is_base_of_v<LightEntity, T>)
 		{
-			m_lights.push_back(static_cast<LightEntity*>(typePtr));
+			m_lights.push_back(dynamic_cast<LightEntity*>(typePtr));
 			typePtr->setLightID(T::m_lightCountByType);
 			++T::m_lightCountByType;
+		}
+
+		if constexpr (std::is_base_of_v<MeshEntity, T>)
+		{
+			auto& meshes = typePtr->getMeshes();
+			for (auto* mesh : meshes)
+			{
+				for (auto* mat : mesh->getMaterials())
+				{
+					m_renderBatches[mat->tryGetShader()].push_back(typePtr);
+				}
+			}
 		}
 
 		if (auto icon = IconRegistry::tryGetIcon<T>())
@@ -63,6 +84,11 @@ public:
 	size_t getEntityCount() const
 	{
 		return m_entities.size();
+	}
+
+	const std::unordered_map<Shader*, std::vector<MeshEntity*>>& getRenderBatches()
+	{
+		return m_renderBatches;
 	}
 
 	void illuminate(const Shader& shader);
