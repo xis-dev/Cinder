@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
+
 project(Cinder LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -56,31 +57,72 @@ set(ALL_DEPENDENCIES_DIRS
     ${imgui_SOURCE_DIR}
     ${assimp_SOURCE_DIR})
 
-set (HEADERS    
-     "Resources/ResourceManager.h"
-     "Resources/Resource.h"
-     "Core/IconRegistry.h"   )
-set(SOURCES
-        main.cpp
-        "Resources/Sources/Shader.cpp"
-        Objects/Sources/VAO.cpp
-        Objects/Sources/VBO.cpp
-        Objects/Sources/EBO.cpp
-        "Resources/Sources/Texture.cpp"
-        Objects/Sources/Camera.cpp
-        Objects/Sources/Light.cpp
-        Objects/Sources/Vertex.cpp
-        Main/Engine.cpp
-        Main/Scene.cpp
-        "Resources/Sources/Material.cpp"
-        Core/Sources/MaterialInstance.cpp
-        "Resources/Sources/Mesh.cpp"
-        Core/Sources/Entity.cpp
+set(PROJECT_INCLUDE_DIR 
+    ${PROJECT_SOURCE_DIR}/includes
+)
 
-        
-        ${GLAD_DIR}/glad.c
-        ${STB_DIR}/stb.cpp
- "Core/Sources/LightEntity.cpp" "Core/Sources/MeshEntity.cpp" "Resources/Sources/Model.cpp")
+set (INCLUDE_DIRS
+    ${PROJECT_INCLUDE_DIR}
+    includes/Engine
+    includes/Entity
+    includes/Graphics
+    includes/Math
+    includes/Primitives
+    includes/Resources
+    includes/Scene
+    includes/Utilities
+    
+)
+set (HEADER_SOURCES
+    includes/Graphics/Vertex.h
+    includes/Primitives/Cube.h
+    includes/Primitives/Plane.h
+    "includes/Resources/Resource.h"
+    includes/Resources/ResourceManager.h
+    includes/Utilities/FileManager.h
+    includes/Utilities/IconRegistry.h
+
+    includes/Scene/Camera.h
+    includes/Scene/Scene.h
+
+)
+
+set(PROJECT_SOURCES
+     src/main.cpp
+
+     src/Engine/Engine.cpp
+
+     src/Entity/Entity.cpp
+     src/Entity/LightEntity.cpp
+     src/Entity/MeshEntity.cpp
+
+     src/Resources/Material.cpp
+     src/Resources/Mesh.cpp
+     src/Resources/Shader.cpp
+     src/Resources/Texture.cpp
+
+     src/Scene/Camera.cpp
+     src/Scene/Scene.cpp
+
+     ${GLAD_DIR}/glad.c
+     ${STB_DIR}/stb.cpp
+
+     src/main.cpp
+
+     src/Engine/Engine.cpp
+
+     src/Entity/Entity.cpp
+     src/Entity/LightEntity.cpp
+     src/Entity/MeshEntity.cpp
+
+     src/Resources/Material.cpp
+     src/Resources/Mesh.cpp
+     src/Resources/Shader.cpp
+     src/Resources/Texture.cpp
+
+     src/Scene/Camera.cpp
+     src/Scene/Scene.cpp
+)
 
 set(IMGUI_SOURCES
         ${imgui_SOURCE_DIR}/imgui.cpp
@@ -92,30 +134,16 @@ set(IMGUI_SOURCES
 )
 
 
-set(INCLUDE_DIRS_HEADERS 
-         Core/Headers
-         Main/Headers
-         Objects/Headers
-         Resources/Headers
-         Shapes/Headers
-)
+add_executable(Cinder ${PROJECT_SOURCES} ${IMGUI_SOURCES} ${HEADER_SOURCES} )
 
-set(INCLUDE_DIRS_SOURCES
-         Core/Headers
-         Main/Sources
-         Objects/Sources
-         Resources/Sources
-         Shapes/Sources
-)
-
-add_executable(Cinder ${SOURCES} ${IMGUI_SOURCES} ${HEADERS} )
+target_compile_options(Cinder PRIVATE /std:c++20)
 
 target_include_directories(Cinder PRIVATE
         ${PROJECT_SOURCE_DIR}
+        ${INCLUDE_DIRS}
         ${ALL_DEPENDENCIES_DIRS}
-        ${INCLUDE_DIRS_HEADERS}
-        ${INCLUDE_DIRS_SOURCES}
 
+        ${imgui_SOURCE_DIR}
         ${imgui_SOURCE_DIR}/backends
 )
 

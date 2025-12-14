@@ -1,3 +1,0 @@
-#include "../Headers/Vertex.h"
-
-
