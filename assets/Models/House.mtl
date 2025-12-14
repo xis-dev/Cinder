@@ -1,0 +1,164 @@
+# Blender 4.5.3 LTS MTL File: 'Project1.blend'
+# www.blender.org
+
+newmtl M_Black
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000000 0.000000 0.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl M_Black.011
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl M_Black.012
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl M_Crack
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.801030 0.462579 0.102777
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl M_DoorPane
+Ns 0.000000
+Ka 0.186364 0.186364 0.186364
+Kd 0.708372 0.401978 0.119539
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+
+newmtl M_Flag
+Ns 55.867775
+Ka 1.000000 1.000000 1.000000
+Kd 0.800440 0.054907 0.032653
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl M_Ground
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd C:/Users/PC/Downloads/proj_1/proj_1/Textures/Ground/M_Ground_Albedo.png
+map_Ns C:/Users/PC/Downloads/proj_1/proj_1/Textures/Ground/M_Ground_Roughness.png
+map_Bump -bm 1.000000 C:/Users/PC/Downloads/proj_1/proj_1/Textures/Ground/M_Ground_Normal.png
+
+newmtl M_Lever
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.057788 0.057788 0.057788
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl M_Lever_Shade
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.080088 0.080088 0.080088
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl M_Lever_Star
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.661124 0.800181 0.166920
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl M_Metal
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd C:/Users/PC/Downloads/proj_1/proj_1/Textures/Metal/Metal052C_1K-JPG_Color.jpg
+map_Ns C:/Users/PC/Downloads/proj_1/proj_1/Textures/Metal/Metal052C_1K-JPG_Roughness.jpg
+
+newmtl M_Mountain
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd C:/Users/PC/Downloads/proj_1/proj_1/Textures/Mountain/M_Mountain_Albedo.png
+map_Ns C:/Users/PC/Downloads/proj_1/proj_1/Textures/Mountain/M_Mountain_Roughness.png
+map_Bump -bm 1.000000 C:/Users/PC/Downloads/proj_1/proj_1/Textures/Mountain/M_Mountain_Normal.png
+
+newmtl M_Roof
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.038605 0.191015 0.610504
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl M_Rope
+Ns 206.611557
+Ka 1.000000 1.000000 1.000000
+Kd 0.513488 0.253195 0.055234
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl M_Wall
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Ns C:/Users/PC/Downloads/proj_1/proj_1/Textures/Wall_Plaster/Plaster001_1K-JPG_Roughness.jpg
+
+newmtl M_Wood
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd C:/Users/PC/Downloads/proj_1/proj_1/Textures/Wood/Wood023_2K-JPG_Color.jpg
+map_Ns C:/Users/PC/Downloads/proj_1/proj_1/Textures/Wood/Wood023_2K-JPG_Roughness.jpg
