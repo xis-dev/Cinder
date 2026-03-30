@@ -19,6 +19,8 @@ protected:
 
 public:
 	void setLightID(int id) { m_lightID = id; }
+	void setIntensity(float i) { m_intensity = i; }
+	float getIntensity() { return m_intensity; }
 	void setColor(Vec3f color) { m_color = color; }
 	Vec3f getColor() { return m_color; }
 
@@ -48,6 +50,7 @@ public:
 		Vec3f color = Vec3f(1.0f),
 		float intensity = 1.0f) : LightEntity(color, intensity)
 	{
+		m_radius = attenuationRadius;
 		Vec3f attenuationValueSet = getAttenuationValues(attenuationRadius);
 		m_constant = attenuationValueSet.x;
 		m_linear = attenuationValueSet.y;

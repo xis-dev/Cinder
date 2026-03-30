@@ -4,19 +4,12 @@
 
 #include "Material.h"
 
-Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Material*>& materials): m_vertices(vertices),
-									  m_indices(indices),
-									  m_materials(materials)
+Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices): m_vertices(vertices),
+									  m_indices(indices)
 {
 	setupMesh();
 }
 
-
-Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, Material* material) : m_vertices(vertices), m_indices(indices)
-{
-	m_materials.push_back(material);
-	setupMesh();
-}
 
 void Mesh::setupMesh()
 {
@@ -47,13 +40,17 @@ void Mesh::setupMesh()
 
 void Mesh::draw(const Shader& shader) const
 {
-	for (auto& mat : m_materials)
-	{
-		mat->use(shader);
-	}
 	glBindVertexArray(vao);
 	glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
+	
+}
+
+void Mesh::destroy()
+{
+	glDeleteVertexArrays(1, &vao);
+	glDeleteBuffers(1, &vbo);
+	glDeleteBuffers(1, &ebo);
 }
 
 

@@ -17,6 +17,6 @@ void main() {
 
 	gl_Position = u_MVPMatrix * vec4(a_Position, 1.0);
 	v_UV = a_TexCoords;
-	v_WorldPos = vec3(u_ModelMatrix * vec4(a_Position, 1.0));
+	v_WorldPos = vec3(u_ModelMatrix * vec4(a_Position, 1.0));				   
 	v_WorldNormal = mat3(transpose(inverse(u_ModelMatrix))) * a_Normal;
-}
+}																			 

@@ -10,7 +10,59 @@ Texture::Texture(const std::string& fileName , Texture::Type texType, bool flipO
                  GLenum wrapType,unsigned desiredFormat): m_type(texType)
 {
 	m_id = loadTextureFile(fileName, texType, flipOnLoad, wrapType, desiredFormat);
-	m_location = FileManager::getAbsolutePath(fileName);
+	m_location = FileManager::getCanonicalPath(fileName);
+}
+
+Texture::Texture(const std::vector<std::string> cubeFaces)
+{
+	m_type = Cubemap;
+	glGenTextures(1, &m_id);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id);
+
+
+	for (unsigned int i = 0; i < cubeFaces.size(); i++)
+	{
+		int width, height, nrColCh;
+		GLenum imageFormat;
+		switch (nrColCh)
+		{
+		case 1:
+			imageFormat = GL_RED;
+			break;
+		case 2:
+			imageFormat = GL_RG;
+			break;
+		case 4:
+			imageFormat = GL_RGBA;
+			break;
+		default:
+			imageFormat = GL_RGB;
+		}
+		unsigned char* data;
+		data = stbi_load(FileManager::getPath(cubeFaces[i]).c_str(), &width, &height, &nrColCh, 0);
+		if (data)
+		{
+			glTexImage2D(
+				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+				0, GL_RGBA, width, height, 0, imageFormat, GL_UNSIGNED_BYTE, data
+			);
+			stbi_image_free(data);
+		}
+		else
+		{
+			std::cout << "Cubemap tex failed to load at path: " << cubeFaces[i] << std::endl;
+			stbi_image_free(data);
+		}
+		
+
+
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 }
 
 
@@ -42,23 +94,25 @@ unsigned int Texture::loadTextureFile(const std::string& filePath, Type texType,
 	}
 
 
-	GLenum imageFormat{GL_RGB};
+	GLenum imageFormat{};
 
-	if (nrColCh == 1)
+	switch (nrColCh)
 	{
-		imageFormat = GL_RED;
+		case 1:
+			imageFormat = GL_RED;
+			break;
+		case 2:
+			imageFormat = GL_RG;
+			break;
+		case 4:
+			imageFormat = GL_RGBA;
+			break;
+		default:
+			imageFormat = GL_RGB;
 	}
-	else if (nrColCh == 2)
-	{
-		imageFormat = GL_RG;
-	}
-	else if (nrColCh == 4)
-	{
-		imageFormat = GL_RGBA;
-	}
+
 
 	// 6407 = GL_RGB, 6408 = GL_RGBA
-	std::cout << "Texture at: " << FileManager::getAbsolutePath(filePath) << " has an image format of: " << std::to_string(imageFormat) << std::endl;
 
 	glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(desiredFormat), width, height, 0, imageFormat, GL_UNSIGNED_BYTE, data);
 
@@ -72,7 +126,7 @@ unsigned int Texture::loadTextureFile(const std::string& filePath, Type texType,
 	return id;
 }
 
-Texture::Type Texture::getType()
+Texture::Type Texture::getType() const
 {
 	return m_type;
 }

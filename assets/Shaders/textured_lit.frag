@@ -36,6 +36,8 @@ struct SpotLight {
 	float outerCutoff;
 };
 
+const float kPI = 3.14159265;
+
 
 in vec2 v_UV;
 in vec3 v_WorldNormal;
@@ -51,7 +53,7 @@ out vec4 FragColor;
 
 
 float near = 0.1;
-float far = 10000.0;
+float far = 1000.0;
 
 #define MAX_POINT_LIGHTS 5
 #define MAX_SPOT_LIGHTS 1
@@ -68,7 +70,6 @@ uniform int u_DiffuseMapCount;
 uniform int u_SpecularMapCount;
 
 
-
 uniform sampler2D t_Specular[MAX_MAPS_SPECULAR];
 uniform sampler2D t_Diffuse[MAX_MAPS_DIFFUSE];
 
@@ -78,6 +79,7 @@ uniform PointLight u_PointLights[MAX_POINT_LIGHTS];
 uniform SpotLight u_SpotLights[MAX_SPOT_LIGHTS];
 
 uniform bool u_cullBackface;
+uniform bool u_Blinn;
 
 
 vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex);
@@ -86,6 +88,7 @@ vec3 calcSpotLight(SpotLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, 
 
 
 float linearizeDepth(float depth);
+
 
 void main() {
 
@@ -104,14 +107,27 @@ void main() {
 	}
 
 	vec3 diffuseTex = vec3(0.0);
-	for (int i = 0; i < numberOfDiffuseMaps; i++) {
+	if (numberOfDiffuseMaps > 0) {
+		for (int i = 0; i < numberOfDiffuseMaps; i++) {
 		diffuseTex += vec3(texture(t_Diffuse[i], v_UV));
 	}
+	}
+	else {
+	diffuseTex = vec3(1.0);	
+	}
+	diffuseTex /= max(numberOfDiffuseMaps, 1);
+	
 
 	vec3 specularTex = vec3(0.0);
-	for (int i = 0; i < numberOfSpecularMaps; i++) {
+	if (numberOfSpecularMaps > 0) {
+		for (int i = 0; i < numberOfSpecularMaps; i++) {
 		specularTex += vec3(texture(t_Specular[i], v_UV));
 	}
+	}
+	else {
+		specularTex = vec3(1.0);
+	}
+	specularTex /= max(numberOfSpecularMaps, 1);
 
 	vec3 result = vec3(0,0,0);
 
@@ -129,13 +145,34 @@ void main() {
 
 vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex) {
 
-	float diff = max(dot(normalize(-light.direction), normal), 0.0) * u_Material.diffuse;
+
+	vec3 lightDir = normalize(-light.direction);
+	float diff = max(dot(lightDir, normal), 0.0) * u_Material.diffuse;
 	vec3 diffuse = diffuseTex * diff * light.color;
 
 	vec3 ambient = u_Material.ambient * light.color * diffuseTex;
 
-	vec3 reflectedDir = normalize(reflect(normalize(light.direction), normal));
-	float spec = pow(max(dot(viewDir, reflectedDir), 0.0), u_Material.shininess);
+	float spec = 0.0;
+
+	if (u_Blinn) {
+
+	float energyConserv = ( 8.0 + u_Material.shininess ) / ( 8.0 * kPI ); 
+	vec3 halfwayDir = normalize(lightDir + viewDir);
+	spec = 1.0 * pow(max(dot(normal, halfwayDir), 0.0), u_Material.shininess);
+
+	}
+	else {
+	float energyConserv = ( 2.0 + u_Material.shininess ) / ( 2.0 * kPI ); 
+
+	vec3 reflectedDir = normalize(reflect(-lightDir	, normal));
+	spec = 1.0 * pow(max(dot(viewDir, reflectedDir), 0.0), u_Material.shininess);
+	}
+
+	float NdotV = max(dot(normal, viewDir), 0.0);
+	float NdotL = max(dot(normal, lightDir), 0.0);
+
+	float specMask = step(0.0, NdotV) * step(0.0, NdotL);
+	spec *= specMask;
 	vec3 specular = specularTex * spec * u_Material.specular * light.color;
 
 	return (ambient + diffuse + specular ) * light.intensity;
@@ -144,23 +181,39 @@ vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffus
 vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex) {
 
 	vec3 lightDir = normalize(light.position - v_WorldPos);
-
 	float diff = max(dot(normal, lightDir), 0.0);
 	
-	vec3 reflectDir = normalize(reflect(-lightDir, normal));
-	vec3 fragToViewDirection = normalize(u_CameraPosition - v_WorldPos);
 
 	float dist = length(light.position - v_WorldPos);
 
-	float spec = pow(max(dot(fragToViewDirection, reflectDir), 0.0), u_Material.shininess);
+	float spec = 0.0;
+	if (u_Blinn) {
+
+	float energyConserv = ( 8.0 + u_Material.shininess ) / ( 8.0 * kPI ); 
+	vec3 halfwayDir = normalize(lightDir + viewDir);
+	spec = 1.0 * pow(max(dot(normal, halfwayDir), 0.0), u_Material.shininess);
+
+	}
+	else {
+	float energyConserv = ( 2.0 + u_Material.shininess ) / ( 2.0 * kPI ); 
+
+	vec3 reflectedDir = normalize(reflect(-lightDir	, normal));
+	spec = 1.0 * pow(max(dot(viewDir, reflectedDir), 0.0), u_Material.shininess);
+	}
+
 	float attenuation = 1.0 / (light.constant + light.linear * dist + light.quadratic * (dist * dist));
 						
+	float NdotV = max(dot(normal, viewDir), 0.0);
+	float NdotL = max(dot(normal, lightDir), 0.0);
+
+	float specMask = step(0.0, NdotV) * step(0.0, NdotL);
+	spec *= specMask;
 	vec3 diffuse  = u_Material.diffuse  * diff * diffuseTex * light.color;
 	vec3 specular = u_Material.specular * spec * specularTex * light.color;
 
+
 	diffuse  *= attenuation;
 	specular *= attenuation;
-
 	vec3 result = (diffuse + specular ) * light.intensity;
 	return result;
 

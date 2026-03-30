@@ -19,106 +19,87 @@
 
 #include "Primitives/Plane.h"
 #include "Utilities/IconRegistry.h"
-#include "Scene/Scene.h"
+#include "Rendering/Scene.h"
 #include <memory>
 
+#include "Renderer.h"
 #include "assimp/Importer.hpp"
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
 
 #include "Resources/ResourceManager.h"
 #include "Utilities/FileManager.h"
+#include "Utilities/AssetManager.h"
 
-#define PRINTAPI(x) std::cout << #x << std::endl;
+#include "ModelLoader.h"
+
+#include "Resources/Handle.h"
 
 
 class Shader;
-
-
-
-
-namespace screen
-{
-	 inline int         width        {1600};
-	 inline int         height       {900};
-	 inline const char* title        { "GLScene" };
-
-
-	 inline double lastX = width / 2;
-	 inline double lastY = height / 2;
-
-	 inline double xOffset{};
-	 inline double yOffset{};
-	 inline double scrollOffset{};
-	 inline bool shiftLock{ true };
-
-	 inline bool firstMouse{ true };
-
-	 
-}
-
+class Renderer;
+class Scene;
 
 
 class Engine
 {
-private:
-	static GLFWwindow* m_window;
-
 public:
 
-	// vao used to for drawing scene addons such as the world grid and icons on entities
-	unsigned addonVAO = 0;
+private:
+	// Window and mouse settings
+	static GLFWwindow* m_window;
+	static int scrWidth;
+	static int scrHeight;
+	static std::string scrTitle;
 
-	ResourceManager<Shader> shaders{"S_shaderObject"};
-	ResourceManager<Texture> textures{"T_textureObject"};
-	ResourceManager<Material> materials{"MT_materialObject"};
-	ResourceManager<Mesh> meshes{"M_meshObject"};
+	static double xMouseOffset;
+	static double yMouseOffset;
+	static double scrollOffset;
 
-	
-	Scene m_currentScene;
+	static double lastXPos;
+	static double lastYPos;
 
-	static bool cullBackface;
-	static bool drawWireframe;
+	static bool shiftLock;
+	static bool firstMouseInput;
+
 	double m_lastFrameTime{};
 	double m_deltaTime{};
-	Camera camera = Camera( glm::vec3(0.0f, 10.0f, -30.0f),glm::vec3(0.0f, 0.0f, 1.0f), 45.0f, (float)screen::width / screen::height, 15.0f);
+
+	Scene* m_currentScene = new Scene();
+
+	Renderer* renderer = new Renderer();
+
+	AssetManager*  m_assetManager = new AssetManager();
+
+	ModelLoader* m_modelLoader;
+
+	std::map<float, MeshEntity*> transparentObj{};
+	Camera camera = Camera( glm::vec3(0.0f, 10.0f, -30.0f),glm::vec3(0.0f, 0.0f, 1.0f), 45.0f, static_cast<float>(scrWidth) /(scrHeight), 15.0f);
 
 
-	void init(GLFWwindow*& window);
+	 void init(GLFWwindow*& window);
 	// TODO: proper system into class setup
-	void sRendering();
-	void sInput();
-	void deltaTimeUpdate();
+	 void sRendering();
+	 void sInput();
+	 void deltaTimeUpdate();
 
-	static void imguiInit();
-	void imguiUse();
+	  void imguiInit();
+	 void imguiUpdate();
 
-	static void imguiRender();
-	void renderGrid();
-	void renderIcons();
+	 void imguiRender();
 
-	void drawAddon(int indexCount);
-
-	void loadModel(const std::string& filePath, Material* mat);
-	void processNode(aiNode* node, const aiScene* scene, const std::string& directory, Material* mat);
-	Mesh processMesh(aiMesh* mesh, const aiScene* scene, const std::string& directory, Material* mat);
-	std::vector<Texture*> loadMaterialTextures(aiMaterial* mat, aiTextureType assimp_textureType, Texture::Type textureType, const std::string& directory);
-
+	 Model* loadModel(const std::string& file);
 
 	void createTextures();
 	void createShaders();
-	void createMeshes();			   
+	void createModels();
 	void createMaterials();
 
 	void createObjectIcons();
 
-	void initializeAddonVAO();
-	void createIconVAO();
 	void createFloor();
 
-	void addMeshToScene(Mesh* mesh, Vec3f position);
-
-	void sendGeneralShaderUniforms();
+	void addMeshToScene(Model* mesh, Vec3f position);
 
 	void createPointLight(const std::string& name, float radius, Vec3f position);
 
@@ -139,7 +120,7 @@ public:
 	static void mouseCallback(GLFWwindow* window, double xPos, double yPos);
 	static void scrollCallback(GLFWwindow* window, double xOffset, double yOffset);
 public:
-	void run();
+	 void run(const int w, const int h, const std::string& title);
 
 };
 

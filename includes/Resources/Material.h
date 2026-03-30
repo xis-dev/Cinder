@@ -4,28 +4,25 @@
 #include "Math/Vec3.h"
 #include "Resources/Resource.h"
 
+#include "Resources/Handle.h"
+
 class Shader;
 class Texture;
 
 class Material: public Resource
 {
 public:
-	Material(Shader* shader) : m_shader(shader)
+	Material(Handle<Shader> shader) : m_shader(shader)
 	{
 	}
-	Material(Shader* shader, Texture* texture) : m_shader(shader)
+	Material(Handle<Shader> shader, Handle<Texture> texture) : m_shader(shader)
 	{
 		m_textures.push_back(texture);
 	}
-
-	void use(const Shader& shader) const;
-	void addTexture(Texture* texture);
+	void addTexture(Handle<Texture> texture);
 	
-
-	
-	void useShader() const;
-	Shader* tryGetShader();
-	const Shader* tryGetShader() const;
+	Handle<Shader> getShader() const;
+	std::vector<Handle<Texture>> getTextures();
 	void setColor(Vec3f color);
 	void setColor(float r, float g, float b);
 	void setAmbience(float ambientStr);
@@ -49,8 +46,8 @@ private:
 
 public:
 
-	Shader* m_shader{};
-	std::vector<Texture*> m_textures{};
+	Handle<Shader> m_shader{};
+	std::vector<Handle<Texture>> m_textures{};
 
 	virtual void destroy() override {};
 

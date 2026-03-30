@@ -2,7 +2,7 @@
 #pragma once
 
 
-namespace Math
+namespace CinderMath
 {
 	namespace Constants
 	{
@@ -19,6 +19,7 @@ namespace Math
 
 		return (angle * (Constants::PI / 180.0f));
 	}
+
 
 
 }

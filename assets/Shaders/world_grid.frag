@@ -90,6 +90,6 @@ void main()
 
 	color.a *= opacityFalloff;
 
-	if (color.a < 0.01) discard;
+	if (color.a < 0.09) discard;
 	FragColor = color; 
 }

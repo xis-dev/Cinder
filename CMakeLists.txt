@@ -69,7 +69,7 @@ set (INCLUDE_DIRS
     includes/Math
     includes/Primitives
     includes/Resources
-    includes/Scene
+    includes/Rendering
     includes/Utilities
     
 )
@@ -82,10 +82,13 @@ set (HEADER_SOURCES
     includes/Utilities/FileManager.h
     includes/Utilities/IconRegistry.h
 
-    includes/Scene/Camera.h
-    includes/Scene/Scene.h
+    includes/Rendering/Camera.h
+    includes/Rendering/Scene.h
 
-)
+    includes/Resources/Model.h
+        includes/Utilities/AssetManager.h
+
+ "includes/Resources/Handle.h" "includes/Primitives/Skybox.h" "includes/Primitives/Quad.h")
 
 set(PROJECT_SOURCES
      src/main.cpp
@@ -101,8 +104,8 @@ set(PROJECT_SOURCES
      src/Resources/Shader.cpp
      src/Resources/Texture.cpp
 
-     src/Scene/Camera.cpp
-     src/Scene/Scene.cpp
+     src/Rendering/Camera.cpp
+     src/Rendering/Scene.cpp
 
      ${GLAD_DIR}/glad.c
      ${STB_DIR}/stb.cpp
@@ -120,9 +123,11 @@ set(PROJECT_SOURCES
      src/Resources/Shader.cpp
      src/Resources/Texture.cpp
 
-     src/Scene/Camera.cpp
-     src/Scene/Scene.cpp
-)
+     src/Rendering/Camera.cpp
+     src/Rendering/Scene.cpp
+    "src/Resources/Model.cpp"
+        src/Rendering/Renderer.cpp
+        src/Resources/ModelLoader.cpp)
 
 set(IMGUI_SOURCES
         ${imgui_SOURCE_DIR}/imgui.cpp
@@ -136,7 +141,6 @@ set(IMGUI_SOURCES
 
 add_executable(Cinder ${PROJECT_SOURCES} ${IMGUI_SOURCES} ${HEADER_SOURCES} )
 
-target_compile_options(Cinder PRIVATE /std:c++20)
 
 target_include_directories(Cinder PRIVATE
         ${PROJECT_SOURCE_DIR}
@@ -148,6 +152,7 @@ target_include_directories(Cinder PRIVATE
 )
 
 target_compile_definitions(Cinder PRIVATE
+        PROJECT_ROOT="${PROJECT_SOURCE_DIR}"
         IMGUI_DEFINE_MATH_OPERATORS
         GLFW_INCLUDE_NONE
 )

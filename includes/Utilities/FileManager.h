@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <vector>
 
 class FileManager
 {
@@ -34,7 +35,7 @@ public:
 
 		for (auto& base: basePaths)
 		{
-			auto filePath = base / std::filesystem::path(relativePath);
+			std::filesystem::path filePath = std::filesystem::path(base) / relativePath;
 			if (std::filesystem::exists(filePath))
 			{
 				return filePath.string();
@@ -50,21 +51,21 @@ public:
 
 	static std::string getPath(const std::string& relativePath, const std::string& directory)
 	{
-		std::string filePath{};
-		filePath = (directory / std::filesystem::path(relativePath)).string();
-		if (std::filesystem::exists(directory / std::filesystem::path(relativePath)))
+		std::filesystem::path filePath{};
+		filePath = (std::filesystem::path(directory) / relativePath);
+		if (std::filesystem::exists(filePath))
 		{
-			return filePath;
+			return filePath.string();
 		}
 
 		std::cout << "FILEMANAGER:: Failed to locate " << relativePath << " at " << directory << '\n';
 		return relativePath;
 	}
 
-	static std::string getAbsolutePath(const std::string& relativePath)
+	static std::string getCanonicalPath(const std::string& relativePath)
 	{
 		std::string absolute = getPath(relativePath);
-		auto absolutePath = std::filesystem::absolute(absolute);
+		auto absolutePath = std::filesystem::canonical(absolute);
 
 		if (std::filesystem::exists(absolutePath))
 		{
@@ -75,18 +76,17 @@ public:
 		return absolute;
 	}
 
-	static std::string getAbsolutePath(const std::string& relativePath, const std::string& directory)
+	static std::string getCanonicalPath(const std::string& relativePath, const std::string& directory)
 	{
-		std::string absolute = getPath(relativePath, directory);
-		auto absolutePath = std::filesystem::absolute(absolute);
+		std::filesystem::path resolved = std::filesystem::absolute(std::filesystem::path(directory) / relativePath);
 
-		if (std::filesystem::exists(absolute))
+		if (std::filesystem::exists(resolved))
 		{
-			return absolutePath.string();
+			return resolved.string();
 		}
 
-		std::cout << "FILEMANAGER:: Cannot locate absolute path at: " << absolute << '\n';
-		return absolute;
+		std::cout << "FILEMANAGER:: Cannot locate absolute path at: " << resolved << '\n';
+		return resolved.string();
 	}
 
 	static bool fileExists(const std::string& path)

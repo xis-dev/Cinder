@@ -55,9 +55,6 @@ public:
 	virtual void imguiDraw();
 
 	virtual glm::mat4 getTransformMatrix();
-
-
-	virtual void render(const Shader& shader);
 };
 
 

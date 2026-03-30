@@ -13,6 +13,8 @@ class Texture: public Resource
 private:
 	constexpr static unsigned MAX_UNITS{ 32 };
 
+	// TODO: Change back to private
+public:
 	unsigned m_id{};
 	std::string m_location{};
 	
@@ -21,7 +23,8 @@ private:
 public:
 	enum Type {
 		Diffuse,
-		Specular
+		Specular,
+		Cubemap
 	};
 
 private:
@@ -50,10 +53,11 @@ public:
 
 
 	Texture(const std::string& fileName, Type texType = Type::Diffuse, bool flipOnLoad = true, GLenum wrapType = GL_REPEAT, unsigned desiredFormat = GL_RGBA);
+	Texture(const std::vector<std::string> cubeFaces);
 
 	static unsigned loadTextureFile(const std::string& filePath, Type texType = Type::Diffuse, bool flipOnLoad = true, GLenum wrapType = GL_REPEAT, unsigned desiredFormat = GL_RGBA);
 
-	Type getType();
+	Type getType() const;
 	const std::string& getLocation()
 	{
 		return m_location;

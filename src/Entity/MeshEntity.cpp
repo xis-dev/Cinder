@@ -1,22 +1,15 @@
 #include "Entity/MeshEntity.h"
 
-#include "assimp/Importer.hpp"
-#include "assimp/scene.h"
-#include "assimp/postprocess.h"
+
+#include "Resources/ResourceManager.h"
+#include "Resources/Model.h"
 
 #include "glm/ext/matrix_transform.hpp"
 
 #include "imgui.h"
 
-#include "Material.h"
-#include "Mesh.h"
-#include "Resources/ResourceManager.h"
 
 
-MeshEntity::MeshEntity(Mesh* mesh)
-{
-	m_meshes.push_back(mesh);
-}
 
 
 
@@ -37,11 +30,3 @@ glm::mat4 MeshEntity::getTransformMatrix()
 	return modelMatrix;
 }
 
-void MeshEntity::render(const Shader& shader)
-{
-	Entity::render(shader);
-	for (auto& mesh : m_meshes)
-	{
-		mesh->draw(shader);
-	}
-}

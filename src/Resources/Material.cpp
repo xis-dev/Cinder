@@ -4,86 +4,22 @@
 
 
 
-void Material::use(const Shader& shader) const
+
+void Material::addTexture(Handle<Texture> texture)
 {
-	if (m_textures.size() > 0)
-	{
-		int diffuseNr = 0;
-		int specularNr = 0;
-		int textureUnit = 0;
 
-		for (int i = 0; i < (int)m_textures.size(); ++i)
-		{
-			auto& currentTex = m_textures[i];
-			std::string uniformStr;
-
-			switch (currentTex->getType())
-			{
-
-			case Texture::Specular:
-				uniformStr = "t_Specular[" + std::to_string(specularNr) + "]";
-				++specularNr;
-				break;
-
-			case Texture::Diffuse:
-
-			default:
-				uniformStr = "t_Diffuse[" + std::to_string(diffuseNr) + "]";
-				++diffuseNr;
-				break;
-			}
-			shader.setUniformi(uniformStr.c_str(), textureUnit);
-
-			glActiveTexture(GL_TEXTURE0 + textureUnit);
-			currentTex->use();
-			++textureUnit;
-		}
-
-		shader.setUniformi("u_DiffuseMapCount", diffuseNr);
-		shader.setUniformi("u_SpecularMapCount", specularNr);
-
-		glActiveTexture(GL_TEXTURE0);
-	}
-
-	
-	std::string materialUniformBase = "u_Material.";
-	shader.setUniformVec3((materialUniformBase + "albedo").c_str(), m_baseColor);
-	shader.setUniformf((materialUniformBase + "ambient").c_str(), m_ambientStrength);
-	shader.setUniformf((materialUniformBase + "diffuse").c_str(), m_diffuseStrength);
-	shader.setUniformf((materialUniformBase + "specular").c_str(), m_specularStrength);
-	shader.setUniformf((materialUniformBase + "shininess").c_str(), m_shininess);
-
-
-}
-
-void Material::addTexture(Texture* texture)
-{
-	if (texture)
-	{
-		m_textures.push_back(texture);
-	}
+m_textures.push_back(texture);
 }
 
 
-
-
-
-void Material::useShader() const
-{
-	if (m_shader)
-	{
-		m_shader->use();
-	}
-}
-
-Shader* Material::tryGetShader()
+Handle<Shader> Material::getShader() const
 {
 	return m_shader;
 }
 
-const Shader* Material::tryGetShader() const
+std::vector<Handle<Texture>> Material::getTextures()
 {
-	return m_shader;
+	return m_textures;
 }
 
 void Material::setColor(Vec3f color)

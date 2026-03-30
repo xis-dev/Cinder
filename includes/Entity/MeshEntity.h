@@ -2,6 +2,7 @@
 
 #include "Entity.h"
 #include "Math/Vec3.h"
+
 #include "glm/matrix.hpp"
 
 #include <vector>
@@ -13,16 +14,16 @@ struct aiMesh;
 class Mesh;
 class Material;
 class Shader;
+class Model;
 
 class MeshEntity : public Entity {
 public:
 	MeshEntity() = default;
-	MeshEntity(Mesh* mesh);
-	MeshEntity(std::vector<Mesh*>& meshes) : m_meshes(meshes) {}
+	MeshEntity(Model* model) : m_model(model) {}
 
 
 private:
-	std::vector<Mesh*> m_meshes{};
+	Model* m_model{};
 
 	Vec3f m_scale{ 1.0f };
 
@@ -32,9 +33,7 @@ public:
 	void setScale(float s) { m_scale = Vec3f(s); }
 
 
-	const std::vector<Mesh*>& getMeshes() const { return m_meshes; }
-
+	Model* getModel() { return m_model; }
 	virtual void imguiDraw() override;
 	virtual glm::mat4 getTransformMatrix() override;
-	virtual void render(const Shader& shader) override;
 };

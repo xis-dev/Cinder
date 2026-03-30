@@ -52,9 +52,9 @@ public:
 
     bool operator==(const Vec3& rhs)
     {
-        return Math::equals<T>(x, rhs.x) &&
-        	   Math::equals<T>(y, rhs.y) &&
-               Math::equals<T>(z, rhs.z);
+        return CinderMath::equals<T>(x, rhs.x) &&
+            CinderMath::equals<T>(y, rhs.y) &&
+            CinderMath::equals<T>(z, rhs.z);
     }
 
     bool operator!=(const Vec3& rhs)
@@ -98,6 +98,7 @@ public:
         float magnitude = (getMagnitude());
         return Vec3(x/magnitude, y/magnitude, z/magnitude);
     }
+
 
 
     static float dot(Vec3 lhs, Vec3 rhs)

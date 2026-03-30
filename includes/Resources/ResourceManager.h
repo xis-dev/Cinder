@@ -1,8 +1,6 @@
 #pragma once
 
-#include <unordered_map>
-#include <memory>
-#include <typeindex>
+
 
 #include "Resources/Resource.h"
 
@@ -10,99 +8,63 @@
 #include "Resources/Texture.h"
 #include "Resources/Material.h"
 #include "Resources/Mesh.h"
+#include "Resources/Model.h"
 
+
+#include <unordered_map>
+#include <memory>
+#include <typeindex>
+#include <utility>
+#include <vector>
+
+#include "Resources/Handle.h"
 template <typename T>
 requires std::derived_from<T, Resource>
 class ResourceManager {
-	
-	std::unordered_map<std::string, std::unique_ptr<T>> m_resourceMap{};
 
-	std::string m_defaultResourceName{};
-	int m_defaultIndex{};
-	
+	std::vector<std::unique_ptr<T>> resources{};
+	std::unordered_map<std::string, std::uint32_t> nameToIndex{};
+
+
 public:
 
-	ResourceManager(const std::string& defaultResourceName): m_defaultResourceName(defaultResourceName){}
-
-	T* addResource(const std::string& name, const T& resource)
+	Handle<T> add(T&& resource, const std::string& name)
 	{
-		auto resourceName = name;
-		if (name.empty())
-		{
-			resourceName = getCurrentDefaultName();
-		}
-		if (m_resourceMap.contains(name))
-		{
-			std::cerr << "RESOURCE MANAGER:: A resource with this name already exists. \n";
-			return nullptr;
-		}
-		m_resourceMap[resourceName] = std::make_unique<T>(resource);
-		return m_resourceMap[resourceName].get();
+		uint32_t id = resources.size();
+		resources.push_back(std::make_unique<T>(std::move(resource)));
+		nameToIndex[name] = id;
+		return { id };
 	}
 
-	T* addOrReplaceResource(const std::string& name, const T& resource)
+	T* get(Handle<T> handle)
 	{
-		auto resourceName = name;
-		if (name.empty())
-		{
-			resourceName = getCurrentDefaultName();
-		}
-		if (m_resourceMap.contains(name))
-		{
-			std::cout << "RESOURCE MANAGER:: A resource with this name already exists. Replacing current resource. \n";
-		}
-		m_resourceMap[resourceName] = std::make_unique<T>(resource);
-		return m_resourceMap[resourceName].get();
+		return resources[handle.id].get();
 	}
 
-	void clear()
+	T* get(const std::string& name)
 	{
-		m_resourceMap.clear();
+		auto& handleID = nameToIndex[name];
+		return resources[handleID].get();
 	}
 
-	T* tryGetResource(const std::string& name)
+	Handle<T> getHandle(const std::string& name)
 	{
+		return Handle<T>{nameToIndex[name]};
+	}
 
-		if (!m_resourceMap.contains(name))
+	const std::vector<std::unique_ptr<T>>& getAllResources()
+	{
+		return resources;
+	}
+
+	std::vector<std::pair<std::string, std::uint32_t>> getNames() const
+	{
+		std::vector<std::pair<std::string, std::uint32_t>> temp{};
+		for (auto& pair : nameToIndex)
 		{
-			std::cerr << "RESOURCE MANAGER:: There is no resource with the provided name.\n";
-			return nullptr;
+			temp.push_back({ pair.first, pair.second });
 		}
-
-		return m_resourceMap[name].get();
-
-	}
-
-	// TODO: 
-	std::vector<std::pair<std::string, T*>> getAllResources()
-	{
-		std::vector<std::pair<std::string, T*>> out;
-		out.reserve(m_resourceMap.size());
-		for (auto& kv : m_resourceMap) out.emplace_back(kv.first, kv.second.get());
-		return out;
-	}
-
-	std::vector<std::string> getAllResourceNames()
-	{
-		std::vector<std::string> names;
-		names.reserve(m_resourceMap.size());
-		for (auto& kv : m_resourceMap)
-		{
-			names.emplace_back(kv.first);
-		}
-		return names;
-	}
-
-private:
-	std::string getCurrentDefaultName()
-	{
-		if (!m_resourceMap.contains(m_defaultResourceName) && m_defaultIndex == 0)
-		{
-			return m_defaultResourceName;
-		}
-
-		++m_defaultIndex;
-		return m_defaultResourceName + std::to_string(m_defaultIndex);
+		return temp;
 	}
 
 };

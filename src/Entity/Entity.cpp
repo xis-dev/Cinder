@@ -75,7 +75,3 @@ glm::mat4 Entity::getTransformMatrix()
 	return modelMatrix;
 }
 
-void Entity::render(const Shader& shader)
-{
-	shader.setUniformMat4("u_ModelMatrix", getTransformMatrix());
-}
