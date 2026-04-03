@@ -31,6 +31,7 @@ vPos.z += u_CameraPosition.z;
 vPos.y = -0.1;
 
 v_WorldPos =	vPos;
+ vec4 newPos = vec4(vPos, 1.0);
 
 gl_Position = u_VPMatrix * vec4(vPos, 1.0);
 

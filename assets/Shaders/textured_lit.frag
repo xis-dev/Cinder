@@ -42,11 +42,14 @@ const float kPI = 3.14159265;
 in vec2 v_UV;
 in vec3 v_WorldNormal;
 in vec3 v_WorldPos;
+in vec4 v_LightSpacePos;
 
 uniform vec3 u_CameraPosition;
 uniform vec3 u_ViewDirection;
 
 uniform Material u_Material;
+
+uniform float u_Gamma;
 
 out vec4 FragColor;
 
@@ -81,11 +84,14 @@ uniform SpotLight u_SpotLights[MAX_SPOT_LIGHTS];
 uniform bool u_cullBackface;
 uniform bool u_Blinn;
 
+uniform sampler2D u_ShadowMap;
+
 
 vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex);
 vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex);
 vec3 calcSpotLight(SpotLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex);
 
+float shadowCalc(vec4 lightSpacePos);
 
 float linearizeDepth(float depth);
 
@@ -140,7 +146,36 @@ void main() {
 
 	vec3 depth = vec3(linearizeDepth(gl_FragCoord.z)/far);
 	FragColor = vec4(result * u_Material.albedo, 1.0) ;
+
+
+
+	FragColor.rgb = pow(FragColor.rgb, vec3(1.0/u_Gamma));
 	return;
+}
+
+float shadowCalc(vec4 lightSpacePos, float bias) {
+	vec3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
+	projCoords = projCoords * 0.5 + 0.5;
+
+	float closestDepth = texture(u_ShadowMap, projCoords.xy).r;
+
+	float currentDepth = projCoords.z;
+
+	float shadow = 0.0;
+	vec2 texelSize = 1.0 / textureSize(u_ShadowMap, 0);
+	for(int x = -1; x <= 1; ++x)
+	{
+    for(int y = -1; y <= 1; ++y)
+    {
+        float pcfDepth = texture(u_ShadowMap, projCoords.xy + vec2(x, y) * texelSize).r; 
+        shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;        
+    }    
+}
+shadow /= 9.0;
+
+	 if(projCoords.z > 1.0) shadow = 0.0;
+
+	return shadow;
 }
 
 vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex) {
@@ -158,14 +193,14 @@ vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffus
 
 	float energyConserv = ( 8.0 + u_Material.shininess ) / ( 8.0 * kPI ); 
 	vec3 halfwayDir = normalize(lightDir + viewDir);
-	spec = 1.0 * pow(max(dot(normal, halfwayDir), 0.0), u_Material.shininess);
+	spec = pow(max(dot(normal, halfwayDir), 0.0), u_Material.shininess * 4.0);
 
 	}
 	else {
 	float energyConserv = ( 2.0 + u_Material.shininess ) / ( 2.0 * kPI ); 
 
 	vec3 reflectedDir = normalize(reflect(-lightDir	, normal));
-	spec = 1.0 * pow(max(dot(viewDir, reflectedDir), 0.0), u_Material.shininess);
+	spec = pow(max(dot(viewDir, reflectedDir), 0.0), u_Material.shininess);
 	}
 
 	float NdotV = max(dot(normal, viewDir), 0.0);
@@ -175,7 +210,10 @@ vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffus
 	spec *= specMask;
 	vec3 specular = specularTex * spec * u_Material.specular * light.color;
 
-	return (ambient + diffuse + specular ) * light.intensity;
+	float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);  
+	float shadow = shadowCalc(v_LightSpacePos, bias);
+
+	return (ambient + (1.0 - shadow) * (diffuse + specular)) * light.intensity;
 }
 
 vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex) {
@@ -191,14 +229,14 @@ vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex
 
 	float energyConserv = ( 8.0 + u_Material.shininess ) / ( 8.0 * kPI ); 
 	vec3 halfwayDir = normalize(lightDir + viewDir);
-	spec = 1.0 * pow(max(dot(normal, halfwayDir), 0.0), u_Material.shininess);
+	spec =  pow(max(dot(normal, halfwayDir), 0.0), u_Material.shininess * 4.0);
 
 	}
 	else {
 	float energyConserv = ( 2.0 + u_Material.shininess ) / ( 2.0 * kPI ); 
 
 	vec3 reflectedDir = normalize(reflect(-lightDir	, normal));
-	spec = 1.0 * pow(max(dot(viewDir, reflectedDir), 0.0), u_Material.shininess);
+	spec = pow(max(dot(viewDir, reflectedDir), 0.0), u_Material.shininess);
 	}
 
 	float attenuation = 1.0 / (light.constant + light.linear * dist + light.quadratic * (dist * dist));

@@ -38,7 +38,8 @@ void main()	{
         col += sampleTex[i] * kernel[i];
     }
 
-    FragColor = vec4(col, 1.0);
+    float depthValue = texture(u_ScreenTexture, v_UV).r;
+    FragColor = vec4(vec3(depthValue), 1.0);
 
 
 }

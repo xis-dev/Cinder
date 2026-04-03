@@ -12,7 +12,7 @@ class Shader: public Resource
 private:
 	enum ObjectType
 	{
-		Program, Vertex, Fragment
+		Program, Vertex, Fragment, Geometry
 	};
 
 	unsigned m_id = 0;
@@ -39,6 +39,7 @@ public:
 	}*/
 
 	Shader(const char* vertexFile, const char* fragmentFile);
+	Shader(const char* vertexFile, const char* fragmentFile, const char* geometryFile);
 	void setUniformi(const char* name, int value) const;
 	void setUniformf(const char* name, float value) const;
 	void setUniformMat4(const char* name, glm::mat4 value) const;

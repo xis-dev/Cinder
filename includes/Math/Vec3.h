@@ -39,6 +39,11 @@ public:
         return Vec3{x - rhs.x, y - rhs.y, z - rhs.z};
     }
 
+    Vec3 operator-()
+    {
+        return Vec3<T>(x * -1, y * -1, z * -1);
+    }
+
     Vec3 operator*(float scalar)
     {
         return Vec3{x * scalar, y * scalar, z * scalar

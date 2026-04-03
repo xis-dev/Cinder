@@ -95,6 +95,7 @@ void Engine::run(const int w, const int h, const std::string& title)
 		sInput();
 		sRendering();
 
+		glDisable(GL_FRAMEBUFFER_SRGB);
 		imguiRender();
 
 		glfwSwapBuffers(m_window);
@@ -105,6 +106,14 @@ void Engine::run(const int w, const int h, const std::string& title)
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 	glfwTerminate();
+}
+
+Engine::~Engine()
+{
+	delete renderer;
+	delete m_assetManager;
+	delete m_currentScene;
+	delete m_modelLoader;
 }
 
 
@@ -185,7 +194,7 @@ void Engine::init(GLFWwindow*& window)
 			Vec3f(2.0f));
 	}
 
-	createDirectionalLight("DirectionalLight", Vec3f(0.0f, -10.0f, 5.0f));
+	createDirectionalLight("DirectionalLight", Vec3f(3.0f, -10.0f, 3.0f));
 
 
 	for (int i = 0; i < 1;++i) {
@@ -358,7 +367,10 @@ void Engine::imguiUpdate()
 
 	}
 
+	ImGui::DragFloat("Gamma Correction exp", &renderer->gamma, 0.1f);
+	ImGui::Checkbox("Grid", &renderer->drawGrid);
 	ImGui::Checkbox("Blinn-Phong", &renderer->blinnLighting);
+	ImGui::Checkbox("Draw Cubemap", &renderer->cubeMapEnabled);
 	ImGui::Checkbox("Enable Backface Culling", &renderer->cullBackface);
 	ImGui::Checkbox("Draw Wireframe", &renderer->drawWireframe);
 	std::string deltaTimeText{};
@@ -412,6 +424,7 @@ void Engine::createShaders()
 	m_assetManager->shaders.add(Shader("assets/Shaders/item_icon.vert", "assets/Shaders/item_icon.frag"), "icon");
 	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/singleColor.frag"), "border");
 	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/screen.frag"), "screenShader");
+	m_assetManager->shaders.add(Shader("assets/Shaders/shadow/shadowMap.vert", "assets/Shaders/shadow/shadowMap.frag"), "shadowMap");
 }
 
 void Engine::createModels()
@@ -437,8 +450,13 @@ void Engine::createMaterials()
 
 	Handle<Material> floorMat = m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle("textured_lit"), m_assetManager->textures.getHandle("floor")), "floor");
 	m_assetManager->materials.get(floorMat)->setShininess(16.0f);
+	m_assetManager->materials.get(floorMat)->setSpecular(0.15f);
 
-	m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle("textured_lit"), m_assetManager->textures.getHandle("container")), "container");
+	Handle<Texture> containerTex = m_assetManager->textures.getHandle("container");
+
+	auto containerHandle = m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle("textured_lit"), containerTex) , "container");
+
+	m_assetManager->materials.get(containerHandle)->addTexture(m_assetManager->textures.add(Texture("assets/Textures/container_specular.png", Texture::Type::Specular), "container_specular"));
 
 }
 

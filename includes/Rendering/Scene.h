@@ -10,9 +10,12 @@
 #include "Entity/Entity.h"
 #include "Entity/LightEntity.h"
 #include "Entity/MeshEntity.h"
+#include "ext/matrix_clip_space.hpp"
 #include "Resources/Model.h"
 #include "Resources/Mesh.h"
 #include "Resources/Material.h"
+
+#include "glm/mat4x4.hpp"
 
 class Shader;
 class Camera;
@@ -30,6 +33,7 @@ private:
 	std::vector<LightEntity*> m_lights{};
 public:
 	std::vector<MeshEntity*> m_meshEnts{};
+	std::vector<glm::mat4> dirLightTransforms{};
 	//std::unordered_map<Shader*, std::vector<MeshEntity*>> m_renderBatches{};
 
 public:
@@ -38,41 +42,37 @@ public:
 	T* createEntity(const std::string& name, TArgs&&... args)
 	{
 		auto entity = std::make_unique<T>(std::forward<TArgs>(args)...);
-		entity->setTag(name);
+		T* rawPtr = entity.get();
+		rawPtr->setTag(name);
 		m_entities.push_back(std::move(entity));
 
-		auto* basePtr = m_entities.back().get();
-		T* typePtr = dynamic_cast<T*>(basePtr);
 		if constexpr (std::is_base_of_v<LightEntity, T>)
 		{
-			m_lights.push_back(dynamic_cast<LightEntity*>(typePtr));
-			typePtr->setLightID(T::m_lightCountByType);
+			if constexpr (std::is_same_v<T, DirectionalLight>)
+			{
+				const float dist = 50.0f;
+				auto dir = rawPtr->m_direction.getNormalized();
+				glm::mat4 proj = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
+				glm::mat4 view = glm::lookAt(static_cast<glm::vec3>(-dir) * 20.0f, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+				dirLightTransforms.push_back(proj * view);
+			}
+			m_lights.push_back(dynamic_cast<LightEntity*>(rawPtr));
+			rawPtr->setLightID(T::m_lightCountByType);
 			++T::m_lightCountByType;
 		}
 
 		if constexpr (std::is_base_of_v<MeshEntity, T>)
 		{
-			m_meshEnts.push_back(typePtr);
+			m_meshEnts.push_back(rawPtr);
 		}
-		//	Model* model = typePtr->getModel();
-		//	for (const auto &mat: model->getMeshes() | std::views::keys)  // or getModelMap()
-		//	{
-		//		if (mat != nullptr)
-		//		{
-		//			if (Shader* shader = mat->tryGetShader())
-		//			{
-		//				m_renderBatches[shader].push_back(typePtr);
-		//			}
-		//		}
-		//	}
-		//}
+
 
 		if (auto icon = IconRegistry::tryGetIcon<T>())
 		{
-			typePtr->setIcon(*icon);
+			rawPtr->setIcon(*icon);
 		}
 
-		return typePtr;
+		return rawPtr;
 	}
 
 		
@@ -92,11 +92,6 @@ public:
 	{
 		return m_entities.size();
 	}
-
-	//const std::unordered_map<Shader*, std::vector<MeshEntity*>>& getRenderBatches() const
-	//{
-	//	return m_renderBatches;
-	//}
 
 	void illuminate(const Shader& shader) const;
 

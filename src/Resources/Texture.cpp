@@ -1,4 +1,6 @@
 #include "Resources/Texture.h"
+
+#include "code/Common/Win32DebugLogStream.h"
 #include "Utilities/FileManager.h"
 
 #include "stb/stb_image.h"
@@ -11,58 +13,6 @@ Texture::Texture(const std::string& fileName , Texture::Type texType, bool flipO
 {
 	m_id = loadTextureFile(fileName, texType, flipOnLoad, wrapType, desiredFormat);
 	m_location = FileManager::getCanonicalPath(fileName);
-}
-
-Texture::Texture(const std::vector<std::string> cubeFaces)
-{
-	m_type = Cubemap;
-	glGenTextures(1, &m_id);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id);
-
-
-	for (unsigned int i = 0; i < cubeFaces.size(); i++)
-	{
-		int width, height, nrColCh;
-		GLenum imageFormat;
-		switch (nrColCh)
-		{
-		case 1:
-			imageFormat = GL_RED;
-			break;
-		case 2:
-			imageFormat = GL_RG;
-			break;
-		case 4:
-			imageFormat = GL_RGBA;
-			break;
-		default:
-			imageFormat = GL_RGB;
-		}
-		unsigned char* data;
-		data = stbi_load(FileManager::getPath(cubeFaces[i]).c_str(), &width, &height, &nrColCh, 0);
-		if (data)
-		{
-			glTexImage2D(
-				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-				0, GL_RGBA, width, height, 0, imageFormat, GL_UNSIGNED_BYTE, data
-			);
-			stbi_image_free(data);
-		}
-		else
-		{
-			std::cout << "Cubemap tex failed to load at path: " << cubeFaces[i] << std::endl;
-			stbi_image_free(data);
-		}
-		
-
-
-	}
-
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 }
 
 
@@ -95,6 +45,7 @@ unsigned int Texture::loadTextureFile(const std::string& filePath, Type texType,
 
 
 	GLenum imageFormat{};
+	GLenum diffuseDesired{ GL_SRGB };
 
 	switch (nrColCh)
 	{
@@ -106,6 +57,7 @@ unsigned int Texture::loadTextureFile(const std::string& filePath, Type texType,
 			break;
 		case 4:
 			imageFormat = GL_RGBA;
+			diffuseDesired = GL_SRGB_ALPHA;
 			break;
 		default:
 			imageFormat = GL_RGB;
@@ -113,8 +65,15 @@ unsigned int Texture::loadTextureFile(const std::string& filePath, Type texType,
 
 
 	// 6407 = GL_RGB, 6408 = GL_RGBA
+	switch (texType)
+	{
+	case Diffuse:
+		glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(diffuseDesired), width, height, 0, imageFormat, GL_UNSIGNED_BYTE, data);
+		break;
+	default:
+		glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(desiredFormat), width, height, 0, imageFormat, GL_UNSIGNED_BYTE, data);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(desiredFormat), width, height, 0, imageFormat, GL_UNSIGNED_BYTE, data);
+	}
 
 	glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -153,6 +112,98 @@ void Texture::unbind(GLenum activeTexUnit)
 	}
 	glActiveTexture(activeTexUnit);
 	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+unsigned Texture::createCubemap(const std::vector<std::string>& cubeFaces)
+{
+	unsigned id;
+	glGenTextures(1, &id);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, id);
+
+
+	for (unsigned int i = 0; i < cubeFaces.size(); i++)
+	{
+		int width, height, nrColCh;
+		GLenum imageFormat;
+		unsigned char* data;
+		data = stbi_load(FileManager::getPath(cubeFaces[i]).c_str(), &width, &height, &nrColCh, 0);
+		switch (nrColCh)
+		{
+		case 1:
+			imageFormat = GL_RED;
+			break;
+		case 2:
+			imageFormat = GL_RG;
+			break;
+		case 4:
+			imageFormat = GL_RGBA;
+			break;
+		default:
+			imageFormat = GL_RGB;
+		}
+		
+		if (data)
+		{
+			glTexImage2D(
+				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+				0, GL_SRGB_ALPHA , width, height, 0, imageFormat, GL_UNSIGNED_BYTE, data
+			);
+			stbi_image_free(data);
+		}
+		else
+		{
+			std::cout << "Cubemap tex failed to load at path: " << cubeFaces[i] << '\n';
+			stbi_image_free(data);
+		}
+
+
+
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	return id;
+}
+
+unsigned Texture::createDepthMap(const int w, const int h)
+{
+	unsigned id;
+	glGenTextures(1, &id);
+	glBindTexture(GL_TEXTURE_2D, id);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+
+
+	return id;
+}
+
+unsigned Texture::createDepthCubemap(const int w, const int h)
+{
+	unsigned id;
+	glGenTextures(1, &id);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, id);
+	for (unsigned i = 0; i < 6; ++i)
+	{
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 }
 
 void Texture::destroy()

@@ -1,6 +1,9 @@
 #include "Scene.h"
 #include "Resources/Shader.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/matrix.hpp>
+#include <glm/ext/matrix_clip_space.hpp>
 
 
 void Scene::applyLightCountsToShader(const Shader& shader) const

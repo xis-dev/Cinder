@@ -24,7 +24,6 @@ public:
 	enum Type {
 		Diffuse,
 		Specular,
-		Cubemap
 	};
 
 private:
@@ -53,10 +52,9 @@ public:
 
 
 	Texture(const std::string& fileName, Type texType = Type::Diffuse, bool flipOnLoad = true, GLenum wrapType = GL_REPEAT, unsigned desiredFormat = GL_RGBA);
-	Texture(const std::vector<std::string> cubeFaces);
 
 	static unsigned loadTextureFile(const std::string& filePath, Type texType = Type::Diffuse, bool flipOnLoad = true, GLenum wrapType = GL_REPEAT, unsigned desiredFormat = GL_RGBA);
-
+	
 	Type getType() const;
 	const std::string& getLocation()
 	{
@@ -65,6 +63,9 @@ public:
 
 	 void use() const;
 	static void unbind(GLenum activeTexUnit);
+	static unsigned createCubemap(const std::vector<std::string>& cubeFaces);
+	static unsigned createDepthMap(const int w, const int h);
+	static unsigned createDepthCubemap(const int w, const int h);
 
 	virtual void destroy() override;
 

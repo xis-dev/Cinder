@@ -9,6 +9,8 @@ uniform float gridCellSize = 0.225;
 uniform vec4 gridColorThin = vec4(0.5, 0.5, 0.5, 0.5);
 uniform vec4 gridColorThick = vec4(0.8, 0.8, 0.8, 1.0);
 uniform float minPixelsBetweenCell = 2.0;
+
+uniform float u_Gamma;
 out vec4 FragColor;
 
 
@@ -92,4 +94,5 @@ void main()
 
 	if (color.a < 0.09) discard;
 	FragColor = color; 
+	FragColor.rgb = pow(FragColor.rgb, vec3(1 / u_Gamma));
 }

@@ -28,7 +28,7 @@ public:
 	
 	void setupMesh();
 
-	void draw(const Shader& shader) const;
+	void draw() const;
 
 	void destroy();
 

@@ -44,6 +44,10 @@ Shader::Shader(const char* vertexFile, const char* fragmentFile)
 	glDeleteShader(fragment);
 }
 
+Shader::Shader(const char* vertexFile, const char* fragmentFile, const char* geometryFile)
+{
+}
+
 std::string Shader::getShaderSource(const char* fileName)
 {
 	std::ifstream stream(FileManager::getPath(fileName));

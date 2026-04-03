@@ -29,20 +29,24 @@ public:
     "assets/Textures/skybox/front.jpg",
     "assets/Textures/skybox/back.jpg"
     };
-    Texture* cubeMapTex;
+    unsigned cubeMapTex;
     unsigned addonVAO{};
     
     unsigned skyBoxVAO, skyBoxVBO, skyBoxEBO;
+    unsigned shadowFBO, shadowTex;
 
     bool drawWireframe{};
     bool cullBackface{};
     bool blinnLighting{true};
+    bool cubeMapEnabled{ true };
+    bool drawGrid{ true };
 
+    float gamma{ 2.2f };
 private:
     void drawAddon(int indexCount);
     void createSkybox();
     void drawSkybox(const Camera& cam);
-    void loadCubemap(const std::vector<std::string> faces);
+    unsigned createShadowFBO(unsigned depthTex);
 public:
     void init(GLFWwindow* win, AssetManager* manager, Scene* scene);
     void render(const Camera& cam);

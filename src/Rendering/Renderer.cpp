@@ -34,11 +34,6 @@ void Renderer::createSkybox()
     glBindVertexArray(0);
 }
 
-void Renderer::loadCubemap(const std::vector<std::string> faces)
-{
-    Texture* tex = new Texture(faces);
-    cubeMapTex = std::move(tex);
-}
 
 void Renderer::drawSkybox(const Camera& cam)
 {
@@ -47,11 +42,32 @@ void Renderer::drawSkybox(const Camera& cam)
     skyBoxShader->setUniformMat4("u_Projection", cam.getProjectionMatrix());
     skyBoxShader->setUniformMat4("u_View", glm::mat4(glm::mat3(cam.getViewMatrix())));
     skyBoxShader->setUniformi("u_Skybox", 0);
+    skyBoxShader->setUniformf("u_Gamma", gamma);
     glBindVertexArray(skyBoxVAO);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTex->m_id);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTex);
     glDrawArrays(GL_TRIANGLES, 0, 36);
 }
+
+unsigned Renderer::createShadowFBO(unsigned depthTex)
+{
+    unsigned id;
+    glGenFramebuffers(1, &id);
+    glBindFramebuffer(GL_FRAMEBUFFER, id);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTex, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+
+   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)
+   {
+       std::cout << "Complete. \n";
+   }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    return id;
+}
+
 
 void Renderer::init(GLFWwindow *win, AssetManager *manager, Scene* scene)
 {
@@ -68,8 +84,10 @@ void Renderer::init(GLFWwindow *win, AssetManager *manager, Scene* scene)
     glBindVertexArray(0);
 
     createSkybox();
-    loadCubemap(textures_faces);
+    cubeMapTex = Texture::createCubemap(textures_faces);
 
+    shadowTex = Texture::createDepthMap(3840, 2160);
+    shadowFBO = createShadowFBO(shadowTex);
 }
 
 void Renderer::render(const Camera &cam)
@@ -77,18 +95,14 @@ void Renderer::render(const Camera &cam)
     glEnable(GL_DEPTH_TEST);
 
     // Tell opengl what color we want glClear to clear the color buffer
-    glClearColor(0.15f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	 // Clear color and depth buffers
+/*    glClearColor(0.15f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);*/	 // Clear color and depth buffers
 
-    // Draw floor grid
-    if (auto* gridShader = ASSET_MANAGER->shaders.get("grid"))
-    {
-        gridShader->use();
-        gridShader->setUniformMat4("u_VPMatrix", (cam.getProjectionMatrix() * cam.getViewMatrix()));
-        gridShader->setUniformVec3("u_CameraPosition", cam.getPosition());
+    glViewport(0, 0, 3840,  2160);
+    glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+    glClear(GL_DEPTH_BUFFER_BIT);
 
-        drawAddon(6);
-    }
+
 
     if (drawWireframe)
     {
@@ -108,43 +122,87 @@ void Renderer::render(const Camera &cam)
         glDisable(GL_CULL_FACE);
     }
 
-    glm::vec3 camPosition = cam.getPosition();
-    glm::mat4 projectionMat = cam.getProjectionMatrix();
-    glm::mat4 viewMat = cam.getViewMatrix();
-    glm::mat4 vpMat = projectionMat * viewMat;
 
+
+
+    glCullFace(GL_FRONT);
+    auto* shadowMapShader = ASSET_MANAGER->shaders.get("shadowMap");
+    if (shadowMapShader)
+    {
+        shadowMapShader->use();
+        for (const auto& projView : CURRENT_SCENE->dirLightTransforms)
+        {
+            shadowMapShader->setUniformMat4("u_LightProjView", projView);
+        }
+
+    }
 
     for (const auto& entity : CURRENT_SCENE->m_meshEnts)
     {
         for (auto& modelSet : entity->getModel()->getMeshes())
         {
+            shadowMapShader->setUniformMat4("u_Model", entity->getTransformMatrix());
+            modelSet.mesh.draw();
+        }
+    }
+
+
+    glCullFace(GL_BACK);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, 1600, 900);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+    glm::vec3 camPosition = cam.getPosition();
+    glm::mat4 projectionMat = cam.getProjectionMatrix();
+    glm::mat4 viewMat = cam.getViewMatrix();
+    glm::mat4 vpMat = projectionMat * viewMat;
+
+    for (const auto& entity : CURRENT_SCENE->m_meshEnts)
+    {
+        for (auto& modelSet : entity->getModel()->getMeshes())
+        {
+
+
+
+
            Material* mat = ASSET_MANAGER->materials.get(modelSet.mat);
            Shader* shader = ASSET_MANAGER->shaders.get(mat->getShader());
            shader->use();
            CURRENT_SCENE->illuminate(*shader);
            CURRENT_SCENE->applyLightCountsToShader(*shader);
 
+
+           for (const auto& projView : CURRENT_SCENE->dirLightTransforms)
+           {
+               shader->setUniformMat4("u_LightSpaceMatrix", projView);
+           }
+
            shader->setUniformVec3("u_CameraPosition", camPosition);
            shader->setUniformMat4("u_ProjectionMatrix", projectionMat);
            shader->setUniformMat4("u_ModelMatrix", entity->getTransformMatrix());
+           shadowMapShader->setUniformMat4("u_Model", entity->getTransformMatrix());
            shader->setUniformMat4("u_ViewMatrix", viewMat);
            shader->setUniformMat4("u_VPMatrix", vpMat);
            shader->setUniformi("u_Blinn", blinnLighting);
+           shader->setUniformf("u_Gamma", gamma);
 
 
            shader->setUniformVec3("u_ViewDirection", cam.getDirection());
            shader->setUniformMat4("u_MVPMatrix", vpMat * entity->getTransformMatrix());
 
            const auto textures = mat->getTextures();
-           if (textures.size() > 0)
+           int textureUnit = 0;
+
+           if (!textures.empty())
            {
                int diffuseNr = 0;
                int specularNr = 0;
-               int textureUnit = 0;
 
-               for (int i = 0; i < (int)textures.size(); ++i)
+               for (auto texture : textures)
                {
-                   auto* currentTex = ASSET_MANAGER->textures.get(textures[i]);
+                   auto* currentTex = ASSET_MANAGER->textures.get(texture);
                    std::string uniformStr;
 
                    switch (currentTex->getType())
@@ -171,9 +229,13 @@ void Renderer::render(const Camera &cam)
 
                shader->setUniformi("u_DiffuseMapCount", diffuseNr);
                shader->setUniformi("u_SpecularMapCount", specularNr);
-
-               glActiveTexture(GL_TEXTURE0);
            }
+
+
+           glActiveTexture(GL_TEXTURE0 + textureUnit);
+           glBindTexture(GL_TEXTURE_2D, shadowTex);
+           shader->setUniformi("u_ShadowMap", textureUnit);
+           glActiveTexture(GL_TEXTURE0);
 
 
            std::string materialUniformBase = "u_Material.";
@@ -183,19 +245,39 @@ void Renderer::render(const Camera &cam)
            shader->setUniformf((materialUniformBase + "specular").c_str(), mat->getSpecular());
            shader->setUniformf((materialUniformBase + "shininess").c_str(), mat->getShininess());
 
-           modelSet.mesh.draw(*shader);
+           modelSet.mesh.draw();
            }
         }
 
  
-    glDepthFunc(GL_LEQUAL);
-    glDepthMask(GL_FALSE);
-    glDisable(GL_CULL_FACE);
+ 
+    if (cubeMapEnabled)
+    {
+        glDepthFunc(GL_LEQUAL);
+        glDepthMask(GL_FALSE);
+        glDisable(GL_CULL_FACE);
 
-    drawSkybox(cam);
+        drawSkybox(cam);
+
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_LESS);
+    }
+    
+    // Draw floor grid
+    if (drawGrid)
+    {
+        if (auto* gridShader = ASSET_MANAGER->shaders.get("grid"))
+        {
+            gridShader->use();
+            gridShader->setUniformMat4("u_VPMatrix", (cam.getProjectionMatrix() * cam.getViewMatrix()));
+            gridShader->setUniformVec3("u_CameraPosition", cam.getPosition());
+            gridShader->setUniformf("u_Gamma", gamma);
+
+            drawAddon(6);
+        }
+    }
 
     glEnable(GL_CULL_FACE);
-    glDepthMask(GL_TRUE);
     glDepthFunc(GL_ALWAYS);
 
     // Render entity icons(if they exist)
@@ -220,6 +302,7 @@ void Renderer::render(const Camera &cam)
                 iconShader->setUniformVec3("u_ObjectPosition", (glm::vec3)entity->getPosition());
                 iconShader->setUniformMat4("u_ProjectionMatrix", projection);
                 iconShader->setUniformMat4("u_ViewMatrix", view);
+                iconShader->setUniformf("u_Gamma", gamma);
 
                 glActiveTexture(GL_TEXTURE0);
                 entity->tryGetIcon()->use();

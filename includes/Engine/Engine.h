@@ -122,6 +122,8 @@ private:
 public:
 	 void run(const int w, const int h, const std::string& title);
 
+	 ~Engine();
+
 };
 
 
