@@ -23,7 +23,7 @@ public:
 	
 	Handle<Shader> getShader() const;
 	std::vector<Handle<Texture>> getTextures();
-	void setColor(Vec3f color);
+	void setColor(glm::vec3 color);
 	void setColor(float r, float g, float b);
 	void setAmbience(float ambientStr);
 	void setDiffuse(float diffuseStr);
@@ -33,12 +33,12 @@ public:
 	float getShininess() const;
 	float getSpecular() const;
 	float getAmbience() const;
-	Vec3f getColor() const;
+	glm::vec3 getColor() const;
 
 
 
 private:
-	Vec3f m_baseColor{1.0f};
+	glm::vec3 m_baseColor{1.0f};
 	float m_ambientStrength{1.0f};
 	float m_diffuseStrength{ 1.0f };
 	float m_specularStrength{ 0.5f }; // arbitrary default for normal

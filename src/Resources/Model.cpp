@@ -6,14 +6,15 @@
 #include "Material.h"
 
 
-Model::Model(const ModelSet& set)
+Model::Model(ModelSet&& set)
 {
-	m_meshes.push_back(set);
+	m_meshes.push_back(std::move(set));
 }
 
-void Model::add(const ModelSet& set)
+
+void Model::add(ModelSet&& set)
 {
-	m_meshes.push_back(set);
+	m_meshes.push_back(std::move(set));
 }
 
 const std::vector<ModelSet>& Model::getMeshes() const

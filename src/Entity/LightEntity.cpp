@@ -14,7 +14,7 @@ void DirectionalLight::use(const Shader& shader)
 	LightEntity::use(shader);
 	const std::string uniformStr{ "u_DirectionalLights[" + std::to_string(m_lightID) + "]." };
 
-	shader.setUniformVec3((uniformStr + "direction").c_str(), m_direction.getNormalized());
+	shader.setUniformVec3((uniformStr + "direction").c_str(), glm::normalize(m_direction));
 	shader.setUniformVec3((uniformStr + "color").c_str(), m_color);
 	shader.setUniformf((uniformStr + "intensity").c_str(), m_intensity);
 }
@@ -36,7 +36,7 @@ void PointLight::imguiDraw()
 	LightEntity::imguiDraw();
 	if (ImGui::DragFloat("Attenuation Radius", &m_radius))
 	{
-		Vec3f attenuationValueSet = getAttenuationValues(m_radius);
+		glm::vec3 attenuationValueSet = getAttenuationValues(m_radius);
 		m_constant = attenuationValueSet.x;
 		m_linear = attenuationValueSet.y;
 		m_quadratic = attenuationValueSet.z;
@@ -75,7 +75,7 @@ void SpotLight::use(const Shader& shader)
 	shader.setUniformf((uniformStr + "innerCutoff").c_str(), m_innerCutoff);
 	shader.setUniformf((uniformStr + "outerCutoff").c_str(), m_outerCutoff);
 	shader.setUniformVec3((uniformStr + "color").c_str(), m_color);
-	shader.setUniformVec3((uniformStr + "direction").c_str(), m_direction.getNormalized());
+	shader.setUniformVec3((uniformStr + "direction").c_str(), glm::normalize(m_direction));
 	shader.setUniformVec3((uniformStr + "position").c_str(), getPosition());
 	shader.setUniformf((uniformStr + "intensity").c_str(), m_intensity);
 

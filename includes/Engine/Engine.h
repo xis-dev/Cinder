@@ -88,7 +88,7 @@ private:
 
 	 void imguiRender();
 
-	 Model* loadModel(const std::string& file);
+	 Handle<Model> loadModel(const std::string& file);
 
 	void createTextures();
 	void createShaders();
@@ -99,16 +99,16 @@ private:
 
 	void createFloor();
 
-	void addMeshToScene(Model* mesh, Vec3f position);
+	void addMeshToScene(Model* mesh, glm::vec3 position);
 
-	void createPointLight(const std::string& name, float radius, Vec3f position);
+	void createPointLight(const std::string& name, float radius, glm::vec3 position);
 
-	void createDirectionalLight(const std::string& name, Vec3f direction);
+	void createDirectionalLight(const std::string& name, glm::vec3 direction);
 
 
-	void createCube(const std::string &name = "Cube", const char *materialName = "default", Vec3f position = Vec3(0.0f), float
+	void createCube(const std::string &name = "Cube", const char *materialName = "default", glm::vec3 position = glm::vec3(0.0f), float
 	                rotationAngle = 0.0f,
-	                Vec3f rotationAxis = Vec3f(0.0f, 0.0f, 1.0f), Vec3f scale = Vec3f(1.0f));
+	                glm::vec3 rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3 scale = glm::vec3(1.0f));
 
 
 

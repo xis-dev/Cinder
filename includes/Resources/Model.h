@@ -22,12 +22,12 @@ struct ModelSet {
 class Model: public Resource {
 public:
 	Model() = default;
-	Model(const ModelSet& set);
+	Model(ModelSet&& set);
 
 	// Use vector of pairs instead of unordered_map
 	std::vector<ModelSet> m_meshes;
 
-	void add(const ModelSet& set);
+	void add(ModelSet&& set);
 
 	const std::vector<ModelSet>& getMeshes() const;
 

@@ -4,7 +4,8 @@
 
 #include "imgui.h"
 
-void Entity::setRotation(Vec3f axis, float angle)
+void Entity::setRotation(
+	glm::vec3 axis, float angle)
 {
 	m_currentRotationAxis = axis;
 	m_currentRotationAngle = angle;

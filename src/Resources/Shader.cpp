@@ -14,10 +14,8 @@
 
 Shader::Shader(const char* vertexFile, const char* fragmentFile)
 {
-	unsigned vertex, fragment;
-
-	vertex  = glCreateShader(GL_VERTEX_SHADER);
-	fragment = glCreateShader(GL_FRAGMENT_SHADER);
+	unsigned vertex = glCreateShader(GL_VERTEX_SHADER);
+	unsigned fragment = glCreateShader(GL_FRAGMENT_SHADER);
 
 	std::string vertexCode = getShaderSource(vertexFile);
 	std::string fragmentCode = getShaderSource(fragmentFile);
@@ -46,6 +44,42 @@ Shader::Shader(const char* vertexFile, const char* fragmentFile)
 
 Shader::Shader(const char* vertexFile, const char* fragmentFile, const char* geometryFile)
 {
+	unsigned vertex = glCreateShader(GL_VERTEX_SHADER);
+	unsigned fragment = glCreateShader(GL_FRAGMENT_SHADER);
+	unsigned geometry = glCreateShader(GL_GEOMETRY_SHADER);
+
+	std::string vertexCode = getShaderSource(vertexFile);
+	std::string fragmentCode = getShaderSource(fragmentFile);
+	std::string geometryCode = getShaderSource(geometryFile);
+
+	const char* vertexSource = vertexCode.c_str();
+	const char* fragmentSource = fragmentCode.c_str();
+	const char* geometrySource = geometryCode.c_str();
+
+	glShaderSource(vertex, 1, &vertexSource, nullptr);
+	glShaderSource(fragment, 1, &fragmentSource, nullptr);
+	glShaderSource(geometry, 1, &geometrySource, nullptr);
+
+	glCompileShader(vertex);
+	errorCheck(vertex, Vertex);
+
+	glCompileShader(fragment);
+	errorCheck(fragment, Fragment);
+	
+	glCompileShader(geometry);
+	errorCheck(geometry, Geometry);
+
+	m_id = glCreateProgram();
+	glAttachShader(m_id, vertex);
+	glAttachShader(m_id, fragment);
+	glAttachShader(m_id, geometry);
+
+	glLinkProgram(m_id);
+	errorCheck(m_id, ObjectType::Program);
+
+	glDeleteShader(vertex);
+	glDeleteShader(fragment);
+	glDeleteShader(geometry);
 }
 
 std::string Shader::getShaderSource(const char* fileName)
@@ -130,13 +164,26 @@ void Shader::errorCheck(unsigned object, ObjectType type)
 				std::cout << "ERROR COMPILING FRAGMENT SHADER. \n" << infoLog;
 			}
 			break;
+		case Geometry:
+			glGetShaderiv(object, GL_COMPILE_STATUS, &success);
+			if (!success)
+			{
+				glGetShaderInfoLog(object, 512, nullptr, infoLog);
+				std::cout << "ERROR COMPILING GEOMETRY SHADER. \n" << infoLog;
+			}
+			break;
+			break;
 	}
 
 }
 
 void Shader::destroy()
 {
+	if (m_id != 0)
+	{
+		glDeleteProgram(m_id);
+
+	}
 	std::cout << "Deleting shader program: " << m_id << std::endl;
-	glDeleteProgram(m_id);
 }
 

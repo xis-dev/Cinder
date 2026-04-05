@@ -28,11 +28,20 @@ class ResourceManager {
 
 public:
 
-	Handle<T> add(T&& resource, const std::string& name)
+	Handle<T> add(T&& resource, const std::string& name, int nameIdx = 1)
 	{
 		uint32_t id = resources.size();
+		std::string fullName = name;
+		if (nameToIndex.contains(fullName))
+		{
+			fullName = name + "_" + std::to_string(nameIdx);
+			if (nameToIndex.contains(fullName))
+			{
+				add(std::move(resource), name, nameIdx + 1);
+			}
+		}
+		nameToIndex[fullName] = id;
 		resources.push_back(std::make_unique<T>(std::move(resource)));
-		nameToIndex[name] = id;
 		return { id };
 	}
 
@@ -66,6 +75,8 @@ public:
 		}
 		return temp;
 	}
+
+
 
 };
 

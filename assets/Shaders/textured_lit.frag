@@ -43,13 +43,14 @@ in vec2 v_UV;
 in vec3 v_WorldNormal;
 in vec3 v_WorldPos;
 in vec4 v_LightSpacePos;
+in mat3 v_TBN;
 
 uniform vec3 u_CameraPosition;
-uniform vec3 u_ViewDirection;
 
 uniform Material u_Material;
 
 uniform float u_Gamma;
+uniform float u_FarPlane;
 
 out vec4 FragColor;
 
@@ -62,8 +63,9 @@ float far = 1000.0;
 #define MAX_SPOT_LIGHTS 1
 #define MAX_DIR_LIGHTS 1
 
-#define MAX_MAPS_SPECULAR 3
-#define MAX_MAPS_DIFFUSE 3
+#define MAX_MAPS_SPECULAR 10
+#define MAX_MAPS_DIFFUSE 10
+#define MAX_MAPS_NORMAL 10
 
 uniform int u_DirLightCount;
 uniform int u_PointLightCount;
@@ -71,10 +73,11 @@ uniform int u_SpotLightCount;
 
 uniform int u_DiffuseMapCount;
 uniform int u_SpecularMapCount;
-
+uniform int u_NormalMapCount;
 
 uniform sampler2D t_Specular[MAX_MAPS_SPECULAR];
 uniform sampler2D t_Diffuse[MAX_MAPS_DIFFUSE];
+uniform sampler2D t_Normal[MAX_MAPS_NORMAL];
 
 
 uniform DirectionalLight u_DirectionalLights[MAX_DIR_LIGHTS];
@@ -85,18 +88,30 @@ uniform bool u_cullBackface;
 uniform bool u_Blinn;
 
 uniform sampler2D u_ShadowMap;
+uniform samplerCube u_PointMap;
 
 
 vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex);
 vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex);
 vec3 calcSpotLight(SpotLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex);
 
-float shadowCalc(vec4 lightSpacePos);
+float dirShadowCalc(vec4 lightSpacePos, float bias);
 
 float linearizeDepth(float depth);
 
+vec3 sampleOffsetDirections[20] = vec3[]
+(
+   vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
+   vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
+   vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
+   vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
+   vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+); 
 
 void main() {
+
+	vec3 viewDir = normalize(u_CameraPosition - v_WorldPos);
+
 
 	int numberOfDirLights = clamp(u_DirLightCount, 0, MAX_DIR_LIGHTS);
 	int numberOfPointLights = clamp(u_PointLightCount, 0, MAX_POINT_LIGHTS);
@@ -104,13 +119,28 @@ void main() {
 
 	int numberOfDiffuseMaps = clamp(u_DiffuseMapCount, 0, MAX_MAPS_DIFFUSE);
 	int numberOfSpecularMaps = clamp(u_SpecularMapCount, 0, MAX_MAPS_SPECULAR);
+	int numberOfNormalMaps = clamp(u_NormalMapCount, 0, MAX_MAPS_NORMAL);
+
+
 
 	vec3 norm = normalize(v_WorldNormal);
-	vec3 viewDir = normalize(u_CameraPosition - v_WorldPos);
 
-	if (u_cullBackface && dot(norm, viewDir) >= 0.0) {
-		discard;
+
+	if (numberOfNormalMaps > 0) {
+	norm = vec3(0.0);
+		for (int i = 0; i < numberOfNormalMaps; ++i) {
+		norm += (texture(t_Normal[i], v_UV)).rgb;}
+	norm /= numberOfNormalMaps;
+	norm = normalize(norm * 2.0 - 1.0);
+	norm = normalize((v_TBN) * norm);
 	}
+	else {
+		norm = normalize(v_WorldNormal);
+	}
+
+	
+
+	
 
 	vec3 diffuseTex = vec3(0.0);
 	if (numberOfDiffuseMaps > 0) {
@@ -135,25 +165,30 @@ void main() {
 	}
 	specularTex /= max(numberOfSpecularMaps, 1);
 
-	vec3 result = vec3(0,0,0);
+vec3 ambientCol = vec3(0.05, 0.05, 0.08);
+	vec3 ambient = u_Material.ambient * ambientCol * diffuseTex;
+	vec3 result = ambient;
+
 
 	 for (int i = 0; i < numberOfDirLights; i++) {
 		result += calcDirLight(u_DirectionalLights[i], norm, viewDir, diffuseTex, specularTex);
 	}
+
+
 	for (int i = 0; i < numberOfPointLights; i++) {
 		result += calcPointLight(u_PointLights[i], norm, viewDir, diffuseTex, specularTex);
 	}
 
-	vec3 depth = vec3(linearizeDepth(gl_FragCoord.z)/far);
-	FragColor = vec4(result * u_Material.albedo, 1.0) ;
-
-
-
+				FragColor = vec4(result * u_Material.albedo, 1.0) ;
 	FragColor.rgb = pow(FragColor.rgb, vec3(1.0/u_Gamma));
 	return;
+
+
+
+
 }
 
-float shadowCalc(vec4 lightSpacePos, float bias) {
+float dirShadowCalc(vec4 lightSpacePos, float bias) {
 	vec3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
 	projCoords = projCoords * 0.5 + 0.5;
 
@@ -178,6 +213,23 @@ shadow /= 9.0;
 	return shadow;
 }
 
+float pointShadowCalc(vec3 lightPos, vec3 fragPos, float bias, float diskRadius) {
+	vec3 fragToLight = vec3(fragPos - lightPos);
+	    float closestDepth = texture(u_PointMap, fragToLight).r;
+
+		closestDepth *= u_FarPlane;
+		float currentDepth = length(fragToLight);  
+		int samples = 20; 
+		float shadow = 0.0;
+		for (int i = 0; i < samples; ++i) {
+			float closestDepth = texture(u_PointMap, fragToLight + (sampleOffsetDirections[i] * diskRadius)).r;
+			  closestDepth *= u_FarPlane;
+			shadow += currentDepth - bias > closestDepth ? 1.0: 0.0;
+		}
+		return shadow /= samples;
+} 
+
+
 vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex) {
 
 
@@ -185,7 +237,6 @@ vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffus
 	float diff = max(dot(lightDir, normal), 0.0) * u_Material.diffuse;
 	vec3 diffuse = diffuseTex * diff * light.color;
 
-	vec3 ambient = u_Material.ambient * light.color * diffuseTex;
 
 	float spec = 0.0;
 
@@ -211,9 +262,9 @@ vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffus
 	vec3 specular = specularTex * spec * u_Material.specular * light.color;
 
 	float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);  
-	float shadow = shadowCalc(v_LightSpacePos, bias);
+	float shadow = dirShadowCalc(v_LightSpacePos, bias);
 
-	return (ambient + (1.0 - shadow) * (diffuse + specular)) * light.intensity;
+	return ((1.0 - shadow) * (diffuse + specular)) * light.intensity;
 }
 
 vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex) {
@@ -252,7 +303,11 @@ vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex
 
 	diffuse  *= attenuation;
 	specular *= attenuation;
-	vec3 result = (diffuse + specular ) * light.intensity;
+	float bias = max(0.05 * (1.0 - max(dot(normal, lightDir), 0.0)), 0.005);
+	float diskRadius = (1.0 + (length(u_CameraPosition - v_WorldPos) / u_FarPlane)) / 25.0;  
+	float shadow = pointShadowCalc(light.position,v_WorldPos, bias, diskRadius);
+	vec3 result = ((1.0 - shadow) * (diffuse + specular)) * light.intensity;
+
 	return result;
 
 }

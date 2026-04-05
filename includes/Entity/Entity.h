@@ -21,8 +21,8 @@ public:
 
 protected:
 	char m_tag[MAX_NAME_LENGTH]{};
-	Vec3f m_position{};
-	Vec3f m_currentRotationAxis{Vec3f(0.0f, 1.0f, 0.0f)};
+	glm::vec3 m_position{};
+	glm::vec3 m_currentRotationAxis{glm::vec3(0.0f, 1.0f, 0.0f)};
 	float m_currentRotationAngle{};
 
 	Texture* m_icon{};
@@ -30,15 +30,15 @@ protected:
 
 public:
 
-	Vec3f getPosition() { return m_position;}
-	Vec3f getRotationAxis() { return m_currentRotationAxis; }
+	glm::vec3 getPosition() { return m_position;}
+	glm::vec3 getRotationAxis() { return m_currentRotationAxis; }
 	float getRotationAngle() { return m_currentRotationAngle; }
 
-	void setPosition(Vec3f pos) { m_position = pos; }
-	void setPosition(float p) { m_position = Vec3f(p); }
+	void setPosition(glm::vec3 pos) { m_position = pos; }
+	void setPosition(float p) { m_position = glm::vec3(p); }
 
 
-	void setRotation(Vec3f axis, float angle);
+	void setRotation(glm::vec3 axis, float angle);
 
 	void setTag(const std::string& tag);
 

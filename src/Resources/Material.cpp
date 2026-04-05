@@ -22,17 +22,17 @@ std::vector<Handle<Texture>> Material::getTextures()
 	return m_textures;
 }
 
-void Material::setColor(Vec3f color)
+void Material::setColor(glm::vec3 color)
 {
 	m_baseColor = color;
 }
 
 void Material::setColor(float r, float g, float b)
 {
-	m_baseColor = Vec3f(r,g,b);
+	m_baseColor = glm::vec3(r,g,b);
 }
 
-Vec3f Material::getColor() const
+glm::vec3 Material::getColor() const
 {
 	return m_baseColor;
 }

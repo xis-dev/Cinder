@@ -7,4 +7,5 @@ struct AssetManager
     ResourceManager<Texture> textures{};
     ResourceManager<Material> materials{};
     ResourceManager<Model> models{};
+
 };

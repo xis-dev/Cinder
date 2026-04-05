@@ -2,7 +2,9 @@
 
 #include "ResourceManager.h"
 #include "Scene.h"
+
 #include "GLFW/glfw3.h"
+#include "glm/mat4x4.hpp"
 
 #include <vector>
 #include <string>
@@ -10,6 +12,7 @@
 struct AssetManager;
 class Camera;
 class Texture;
+class PointLight;
 
 class Renderer
 {
@@ -34,6 +37,9 @@ public:
     
     unsigned skyBoxVAO, skyBoxVBO, skyBoxEBO;
     unsigned shadowFBO, shadowTex;
+    unsigned pointShadowFBO, pointShadowTex;
+
+    float farPlane{};
 
     bool drawWireframe{};
     bool cullBackface{};
@@ -41,12 +47,16 @@ public:
     bool cubeMapEnabled{ true };
     bool drawGrid{ true };
 
+    std::vector<glm::mat4> shadowTransforms{};
+
     float gamma{ 2.2f };
 private:
     void drawAddon(int indexCount);
     void createSkybox();
     void drawSkybox(const Camera& cam);
-    unsigned createShadowFBO(unsigned depthTex);
+    unsigned create2DShadowFBO(unsigned depthTex);
+    unsigned createCubemapShadowFBO(unsigned depthCubemap);
+    void setupPointMatrices(PointLight* light, const int w, const int h);
 public:
     void init(GLFWwindow* win, AssetManager* manager, Scene* scene);
     void render(const Camera& cam);

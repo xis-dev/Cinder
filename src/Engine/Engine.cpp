@@ -35,34 +35,34 @@ bool Engine::firstMouseInput{true};
 bool Engine::shiftLock{true};
 
 
-Vec3f cubePositions[] = {
-	Vec3f(0.0f, 1.0f,  0.0f),
-	Vec3f(2.0f, 1.0f, -5.0f),
-	Vec3f(-2.0f, 1.0f, -5.0f),
-	Vec3f(4.0f, 1.0f, -10.0f),
-	Vec3f(-4.0f, 1.0f, -10.0f),
+glm::vec3 cubePositions[] = {
+	glm::vec3(0.0f, 1.0f,  0.0f),
+	glm::vec3(2.0f, 1.0f, -5.0f),
+	glm::vec3(-2.0f, 1.0f, -5.0f),
+	glm::vec3(4.0f, 1.0f, -10.0f),
+	glm::vec3(-4.0f, 1.0f, -10.0f),
 
 	// FLOATING cubes
-	Vec3f(2.0f,  2.0f, -6.0f),
-	Vec3f(-2.0f,  3.0f, -8.0f),
-	Vec3f(1.5f,  1.5f, -3.0f),
-	Vec3f(-1.5f,  2.5f, -4.0f),
-	Vec3f(0.0f,  4.0f, -7.0f)
+	glm::vec3(2.0f,  2.0f, -6.0f),
+	glm::vec3(-2.0f,  3.0f, -8.0f),
+	glm::vec3(1.5f,  1.5f, -3.0f),
+	glm::vec3(-1.5f,  2.5f, -4.0f),
+	glm::vec3(0.0f,  4.0f, -7.0f)
 };
 
-Vec3f rotationAxes[] = {
-	Vec3f(0.0f, 1.0f, 0.0f), // upright (Y axis)
-	Vec3f(0.0f, 1.0f, 0.0f),
-	Vec3f(0.0f, 1.0f, 0.0f),
-	Vec3f(0.0f, 1.0f, 0.0f),
-	Vec3f(0.0f, 1.0f, 0.0f),
+glm::vec3 rotationAxes[] = {
+	glm::vec3(0.0f, 1.0f, 0.0f), // upright (Y axis)
+	glm::vec3(0.0f, 1.0f, 0.0f),
+	glm::vec3(0.0f, 1.0f, 0.0f),
+	glm::vec3(0.0f, 1.0f, 0.0f),
+	glm::vec3(0.0f, 1.0f, 0.0f),
 
 	// tilted ones
-	Vec3f(1.0f, 0.0f, 0.0f), // X tilt
-	Vec3f(0.0f, 0.0f, 1.0f), // Z tilt
-	Vec3f(1.0f, 1.0f, 0.0f), // diagonal
-	Vec3f(0.0f, 1.0f, 1.0f),
-	Vec3f(1.0f, 0.0f, 1.0f)
+	glm::vec3(1.0f, 0.0f, 0.0f), // X tilt
+	glm::vec3(0.0f, 0.0f, 1.0f), // Z tilt
+	glm::vec3(1.0f, 1.0f, 0.0f), // diagonal
+	glm::vec3(0.0f, 1.0f, 1.0f),
+	glm::vec3(1.0f, 0.0f, 1.0f)
 };
 
 
@@ -95,7 +95,6 @@ void Engine::run(const int w, const int h, const std::string& title)
 		sInput();
 		sRendering();
 
-		glDisable(GL_FRAMEBUFFER_SRGB);
 		imguiRender();
 
 		glfwSwapBuffers(m_window);
@@ -165,6 +164,9 @@ void Engine::init(GLFWwindow*& window)
 	glfwSetKeyCallback            (window, Engine::keyCallback);
 	glfwSetInputMode              (window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
+
+	Cube::computeTangents();
+	Plane::computeTangents();
 	imguiInit();
 
 	renderer->init(m_window, m_assetManager, m_currentScene);
@@ -179,28 +181,35 @@ void Engine::init(GLFWwindow*& window)
 	createObjectIcons();
 
 
+	//auto bag = loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/backpack/backpack.obj");
+	//auto batEnt = m_currentScene->createEntity<MeshEntity>("Bag", m_assetManager->models.get(bag));
+
+	//auto robot = loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/ship-in-a-bottle/source/full_scene.fbx");
+	//auto robotEnt = m_currentScene->createEntity<MeshEntity>("Robot", m_assetManager->models.get(robot));
 
 
-	//loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/House.obj");
-	//loadModel("c:/users/pc/desktop/c++/glscene/models/Chest_LowPoly.obj", "Chest", "default", Vec3f(0.0f, 10.0f, 0.0f), Vec3f(5.0f));
+	//loadModel("c:/users/pc/desktop/c++/glscene/models/Chest_LowPoly.obj", "Chest", "default", glm::vec3(0.0f, 10.0f, 0.0f), glm::vec3(5.0f));
 
-	createFloor();
 
-	for (int i = 1; i < 10; ++i)
-	{
-		createCube("cube", "container",
-			cubePositions[i], 20.0f * i,
-			rotationAxes[i].getNormalized(),
-			Vec3f(2.0f));
-	}
+	//for (int i = 1; i < 10; ++i)
+	//{
+	//	createCube("cube", "container",
+	//		cubePositions[i], 20.0f * i,
+	//		rotationAxes[i].getNormalized(),
+	//		glm::vec3(2.0f));
+	//}
 
-	createDirectionalLight("DirectionalLight", Vec3f(3.0f, -10.0f, 3.0f));
+	createDirectionalLight("DirectionalLight", glm::vec3(3.0f, -10.0f, 3.0f));
 
 
 	for (int i = 0; i < 1;++i) {
-	createPointLight("PointLight" + std::to_string(i), 500.0f ,Vec3f(pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z));
+	createPointLight("PointLight" + std::to_string(i), 500.0f ,glm::vec3(pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z));
 
 	}
+
+	
+
+	createFloor();
 
 	
 
@@ -330,7 +339,7 @@ void Engine::imguiUpdate()
 					ImGui::DragFloat("Specular", &specularStr);
 					ImGui::DragFloat("Shininess", &shininess);
 
-					currentMaterial->setColor(Vec3f(materialColor[0], materialColor[1], materialColor[2]));
+					currentMaterial->setColor(glm::vec3(materialColor[0], materialColor[1], materialColor[2]));
 					currentMaterial->setDiffuse(diffuseStr);
 					currentMaterial->setAmbience(ambientStr);
 					currentMaterial->setSpecular(specularStr);
@@ -353,7 +362,7 @@ void Engine::imguiUpdate()
 					ImGui::DragFloat3("Position to add Mesh", posToAdd);
 					if (ImGui::Button("Add Mesh", ImVec2(100, 50)))
 					{
-						addMeshToScene(currentMesh, Vec3f(posToAdd[0], posToAdd[1], posToAdd[2]));
+						addMeshToScene(currentMesh, glm::vec3(posToAdd[0], posToAdd[1], posToAdd[2]));
 					}
 
 				}
@@ -393,13 +402,13 @@ void Engine::imguiRender()
 }
 
 
-Model* Engine::loadModel(const std::string& file)
+Handle<Model> Engine::loadModel(const std::string& file)
 {
 	const auto fullPath = FileManager::getPath(file);
 	if (!FileManager::fileExists(fullPath))
 	{
 		std::cerr << "ENGINE:: Cannot load this model.\n";
-		return nullptr;
+		return Handle<Model>{0};
 	}
 	return m_modelLoader->loadModel(file);
 }
@@ -410,7 +419,8 @@ void Engine::createTextures()
 {
 	m_assetManager->textures.add(Texture("assets/Textures/empty.jpg"), "default");
 	m_assetManager->textures.add(Texture("assets/Textures/aphex.gif"), "aphex");
-	m_assetManager->textures.add(Texture("assets/Textures/woodenFloor.jpg", Texture::Diffuse, true, GL_REPEAT), "floor");
+	auto floorTex = m_assetManager->textures.add(Texture("assets/Textures/brickwall.jpg", Texture::Diffuse, true, GL_REPEAT), "floor");
+	m_assetManager->textures.add(Texture("assets/Textures/brickwall_normal.jpg", Texture::Normal, true, GL_REPEAT), "floor_normal");
 	m_assetManager->textures.add(Texture("assets/Textures/container_diffuse.png"), "container");
 }
 
@@ -425,6 +435,10 @@ void Engine::createShaders()
 	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/singleColor.frag"), "border");
 	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/screen.frag"), "screenShader");
 	m_assetManager->shaders.add(Shader("assets/Shaders/shadow/shadowMap.vert", "assets/Shaders/shadow/shadowMap.frag"), "shadowMap");
+
+	m_assetManager->shaders.add(Shader("assets/Shaders/shadow/pointMap.vert", "assets/Shaders/shadow/pointMap.frag", "assets/Shaders/shadow/pointMap.geom"), "pointMap");
+	m_assetManager->shaders.add(Shader("assets/Shaders/shadow/pointMap.vert", "assets/Shaders/shadow/pointMap.frag", "assets/Shaders/shadow/pointMap.geom"), "pointMap");
+	m_assetManager->shaders.add(Shader("assets/Shaders/shadow/pointMap.vert", "assets/Shaders/shadow/pointMap.frag", "assets/Shaders/shadow/pointMap.geom"), "pointMap");
 }
 
 void Engine::createModels()
@@ -432,9 +446,9 @@ void Engine::createModels()
 	Handle<Material> container = m_assetManager->materials.getHandle("container");
 	Handle<Material> def = m_assetManager->materials.getHandle("default");
 	Handle<Material> floor = m_assetManager->materials.getHandle("floor");
-	m_assetManager->models.add(Model(ModelSet{ Mesh(Cube::vertices, Cube::indices), container}), "cube");
-	m_assetManager->models.add(Model(ModelSet{ Mesh(Plane::vertices, Plane::indices), def}), "plane");
-	m_assetManager->models.add(Model(ModelSet{ Mesh(Plane::vertices, Plane::indices), floor }), "floor");
+	m_assetManager->models.add(Model(ModelSet{std::move(Mesh(Cube::vertices, Cube::indices)), container}), "cube");
+	m_assetManager->models.add(Model(ModelSet{ std::move(Mesh(Plane::vertices, Plane::indices)), def}), "plane");
+	m_assetManager->models.add(Model(ModelSet{ std::move(Mesh(Plane::vertices, Plane::indices)), floor }), "floor");
 }
 
 void Engine::createMaterials()
@@ -451,6 +465,7 @@ void Engine::createMaterials()
 	Handle<Material> floorMat = m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle("textured_lit"), m_assetManager->textures.getHandle("floor")), "floor");
 	m_assetManager->materials.get(floorMat)->setShininess(16.0f);
 	m_assetManager->materials.get(floorMat)->setSpecular(0.15f);
+	m_assetManager->materials.get(floorMat)->addTexture(m_assetManager->textures.getHandle("floor_normal"));
 
 	Handle<Texture> containerTex = m_assetManager->textures.getHandle("container");
 
@@ -480,7 +495,7 @@ void Engine::createFloor()
 	floor->setScale(35.0f);
 }
 
-void Engine::addMeshToScene(Model* model, Vec3f position)
+void Engine::addMeshToScene(Model* model, glm::vec3 position)
 {
 	auto* entity = m_currentScene->createEntity<MeshEntity>("NewObject", model);
 	entity->setPosition(position);
@@ -489,21 +504,21 @@ void Engine::addMeshToScene(Model* model, Vec3f position)
 
 
 
-void Engine::createPointLight(const std::string& name, float radius, Vec3f position)
+void Engine::createPointLight(const std::string& name, float radius, glm::vec3 position)
 {
 	auto* light = m_currentScene->createEntity<PointLight>(name, radius);
 	light->setPosition(position);
 }
 
-void Engine::createDirectionalLight(const std::string& name, Vec3f direction)
+void Engine::createDirectionalLight(const std::string& name, glm::vec3 direction)
 {
 	auto* light = m_currentScene->createEntity<DirectionalLight>(name, direction);
 	light->setPosition(3.0f);
 	light->setIntensity(0.1f);
 }
 
-void Engine::createCube(const std::string& name, const char* materialName, Vec3f position, float rotationAngle, Vec3f rotationAxis,
-                        Vec3f scale)
+void Engine::createCube(const std::string& name, const char* materialName, glm::vec3 position, float rotationAngle, glm::vec3 rotationAxis,
+                        glm::vec3 scale)
 {
 	auto cube = m_currentScene->createEntity<MeshEntity>("Cube", m_assetManager->models.get("cube"));
 	cube->setPosition(position);

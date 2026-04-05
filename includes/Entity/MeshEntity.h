@@ -25,12 +25,12 @@ public:
 private:
 	Model* m_model{};
 
-	Vec3f m_scale{ 1.0f };
+	glm::vec3 m_scale{ 1.0f };
 
 public:
-	Vec3f getScale() { return m_scale; }
-	void setScale(Vec3f scale) { m_scale = scale; }
-	void setScale(float s) { m_scale = Vec3f(s); }
+	glm::vec3 getScale() { return m_scale; }
+	void setScale(glm::vec3 scale) { m_scale = scale; }
+	void setScale(float s) { m_scale = glm::vec3(s); }
 
 
 	Model* getModel() { return m_model; }

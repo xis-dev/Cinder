@@ -29,9 +29,10 @@ public:
 private:
 
 	size_t m_totalEntities{};
-	std::vector<std::unique_ptr<Entity>> m_entities{};
-	std::vector<LightEntity*> m_lights{};
 public:
+	std::vector<std::unique_ptr<Entity>> m_entities{};
+public:
+	std::vector<LightEntity*> m_lights{};
 	std::vector<MeshEntity*> m_meshEnts{};
 	std::vector<glm::mat4> dirLightTransforms{};
 	//std::unordered_map<Shader*, std::vector<MeshEntity*>> m_renderBatches{};
@@ -51,7 +52,7 @@ public:
 			if constexpr (std::is_same_v<T, DirectionalLight>)
 			{
 				const float dist = 50.0f;
-				auto dir = rawPtr->m_direction.getNormalized();
+				auto dir = glm::normalize(rawPtr->m_direction);
 				glm::mat4 proj = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
 				glm::mat4 view = glm::lookAt(static_cast<glm::vec3>(-dir) * 20.0f, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 				dirLightTransforms.push_back(proj * view);

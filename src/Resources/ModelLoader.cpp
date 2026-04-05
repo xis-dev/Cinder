@@ -10,26 +10,31 @@
 
 
 
-Model* ModelLoader::loadModel(const std::string &file)
+Handle<Model> ModelLoader::loadModel(const std::string &file)
 {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(file, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
+    const aiScene* scene = importer.ReadFile(file, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
         std::cout << "ENGINE::ASSIMP:: " << importer.GetErrorString() << std::endl;
-    	return nullptr;
+    	return Handle<Model>{0};
     }
 
 	std::filesystem::path p(file);
 	std::string directory = p.parent_path().string();
 
     Model tempModel{};
+	p = std::filesystem::canonical(p);
+	auto slash = p.string().find_last_of("/\\");
+	auto dot = p.string().find_last_of('.');
+	std::string modelName = p.string().substr(slash == std::string::npos ? 0 : slash + 1,
+		dot - (slash == std::string::npos ? 0 : slash + 1));
     processNode(tempModel, scene->mRootNode, scene, directory);
-	return ASSET_MANAGER->models.get(ASSET_MANAGER->models.add(std::move(tempModel), "empty"));
+	return (ASSET_MANAGER->models.add(std::move(tempModel), modelName));
 }
 
-void ModelLoader::processMesh(Model &modelToLoadInto, aiMesh *mesh, const aiScene *scene, const std::string &directory)
+void ModelLoader::processMesh(Model& modelToLoadInto, aiMesh *mesh, const aiScene *scene, const std::string &directory)
 {
     std::vector<Vertex> vertices;
 	std::vector<unsigned> indices;
@@ -43,13 +48,24 @@ void ModelLoader::processMesh(Model &modelToLoadInto, aiMesh *mesh, const aiScen
 		vector.y = mesh->mVertices[i].y;
 		vector.z = mesh->mVertices[i].z;
 
-		vertex.position = Vec3f(vector.x, vector.y, vector.z);
+		vertex.position = glm::vec3(vector.x, vector.y, vector.z);
 
 		vector.x = mesh->mNormals[i].x;
 		vector.y = mesh->mNormals[i].y;
 		vector.z = mesh->mNormals[i].z;
 
-		vertex.normal = Vec3f(vector.x, vector.y, vector.z);
+		vertex.normal = glm::vec3(vector.x, vector.y, vector.z);
+
+		if (mesh->HasTangentsAndBitangents())
+		{
+			vertex.tangent = glm::vec3(mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z);
+			vertex.bitangent = glm::vec3(-mesh->mBitangents[i].x, -mesh->mBitangents[i].y, -mesh->mBitangents[i].z);
+		}
+		else
+		{
+			vertex.tangent = glm::vec3(1.0f, 0.0f, 0.0f);
+			vertex.bitangent = glm::vec3(0.0f, 1.0f, 0.0f);
+		}
 
 		if (mesh->mTextureCoords[0])
 		{
@@ -57,12 +73,11 @@ void ModelLoader::processMesh(Model &modelToLoadInto, aiMesh *mesh, const aiScen
 
 			vec.x = mesh->mTextureCoords[0][i].x;
 			vec.y = mesh->mTextureCoords[0][i].y;
-
-			vertex.texCoords = Vec2f(vec.x, vec.y);
+			vertex.texCoords = glm::vec2(vec.x, vec.y);
 		}
 		else
 		{
-			vertex.texCoords = Vec2f(0.0f, 0.0f);
+			vertex.texCoords = glm::vec2(0.0f, 0.0f);
 		}
 
 		vertices.push_back(vertex);
@@ -79,14 +94,18 @@ void ModelLoader::processMesh(Model &modelToLoadInto, aiMesh *mesh, const aiScen
 
 	if (mesh->mMaterialIndex >= 0)
 	{
-		Material tempMat{ASSET_MANAGER->shaders.getHandle("lit")};
+		Material tempMat{ASSET_MANAGER->shaders.getHandle("textured_lit")};
 		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-		std::vector<Handle<Texture>> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, Texture::Diffuse, directory);
+		std::vector<Handle<Texture>> diffuseMaps = loadMaterialTextures(material, aiTextureType_BASE_COLOR, Texture::Diffuse, directory);
 
 		ts.insert(ts.end(), diffuseMaps.begin(), diffuseMaps.end());
-		std::vector<Handle<Texture>> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, Texture::Specular, directory);
+		std::vector<Handle<Texture>> specularMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, Texture::Specular, directory);
 
 		ts.insert(ts.end(), specularMaps.begin(), specularMaps.end());
+
+		std::vector<Handle<Texture>> normalMps = loadMaterialTextures(material, aiTextureType_NORMAL_CAMERA, Texture::Normal, directory);
+
+		ts.insert(ts.end(), normalMps.begin(), normalMps.end());
 
 		for (auto tex : ts)
 		{
@@ -94,14 +113,14 @@ void ModelLoader::processMesh(Model &modelToLoadInto, aiMesh *mesh, const aiScen
 		}
 		// TODO: Mat name may create problems
 
-		modelToLoadInto.add(ModelSet{ Mesh(vertices, indices), ASSET_MANAGER->materials.add(std::move(tempMat), mesh->mName.C_Str()) });
+		modelToLoadInto.add((ModelSet{ std::move(Mesh(vertices, indices)), ASSET_MANAGER->materials.add(std::move(tempMat), mesh->mName.C_Str()) }));
 	}
 
 }
 
 
 
-void ModelLoader::processNode(Model &modelToLoadInto, aiNode *node, const aiScene *scene, const std::string &directory)
+void ModelLoader::processNode(Model& modelToLoadInto, aiNode *node, const aiScene *scene, const std::string &directory)
 {
     for (unsigned i = 0; i < node->mNumMeshes; i++)
     {
@@ -128,6 +147,7 @@ std::vector<Handle<Texture>> ModelLoader::loadMaterialTextures(aiMaterial *mat, 
 		if (!texturePath.is_absolute())
 		{
 			texturePath = std::filesystem::path(directory) / texturePath;
+			texturePath = std::filesystem::canonical(texturePath);
 		}
 		auto texStr = std::filesystem::path(str.C_Str());
 		bool skip = false;

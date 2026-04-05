@@ -24,6 +24,7 @@ public:
 	enum Type {
 		Diffuse,
 		Specular,
+		Normal
 	};
 
 private:
