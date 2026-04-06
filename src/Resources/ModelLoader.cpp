@@ -96,14 +96,14 @@ void ModelLoader::processMesh(Model& modelToLoadInto, aiMesh *mesh, const aiScen
 	{
 		Material tempMat{ASSET_MANAGER->shaders.getHandle("textured_lit")};
 		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-		std::vector<Handle<Texture>> diffuseMaps = loadMaterialTextures(material, aiTextureType_BASE_COLOR, Texture::Diffuse, directory);
+		std::vector<Handle<Texture>> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, Texture::Diffuse, directory);
 
 		ts.insert(ts.end(), diffuseMaps.begin(), diffuseMaps.end());
-		std::vector<Handle<Texture>> specularMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, Texture::Specular, directory);
+		std::vector<Handle<Texture>> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, Texture::Specular, directory);
 
 		ts.insert(ts.end(), specularMaps.begin(), specularMaps.end());
 
-		std::vector<Handle<Texture>> normalMps = loadMaterialTextures(material, aiTextureType_NORMAL_CAMERA, Texture::Normal, directory);
+		std::vector<Handle<Texture>> normalMps = loadMaterialTextures(material, aiTextureType_HEIGHT, Texture::Normal, directory);
 
 		ts.insert(ts.end(), normalMps.begin(), normalMps.end());
 

@@ -181,12 +181,16 @@ void Engine::init(GLFWwindow*& window)
 	createObjectIcons();
 
 
-	//auto bag = loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/backpack/backpack.obj");
-	//auto batEnt = m_currentScene->createEntity<MeshEntity>("Bag", m_assetManager->models.get(bag));
+	auto robot = loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/ship-in-a-bottle/source/full_scene.fbx");
+	loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/robot/LP_Sketchfab.obj");
+	auto robotEnt = m_currentScene->createEntity<MeshEntity>("Robot", m_assetManager->models.get(robot));
 
-	//auto robot = loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/ship-in-a-bottle/source/full_scene.fbx");
-	//auto robotEnt = m_currentScene->createEntity<MeshEntity>("Robot", m_assetManager->models.get(robot));
+	createFloor();
 
+
+	auto robotEn2t = m_currentScene->createEntity<MeshEntity>("Robot2", m_assetManager->models.get(robot));
+
+	createFloor();
 
 	//loadModel("c:/users/pc/desktop/c++/glscene/models/Chest_LowPoly.obj", "Chest", "default", glm::vec3(0.0f, 10.0f, 0.0f), glm::vec3(5.0f));
 
@@ -207,9 +211,7 @@ void Engine::init(GLFWwindow*& window)
 
 	}
 
-	
 
-	createFloor();
 
 	
 

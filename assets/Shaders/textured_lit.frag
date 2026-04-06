@@ -77,7 +77,7 @@ uniform int u_NormalMapCount;
 
 uniform sampler2D t_Specular[MAX_MAPS_SPECULAR];
 uniform sampler2D t_Diffuse[MAX_MAPS_DIFFUSE];
-uniform sampler2D t_Normal[MAX_MAPS_NORMAL];
+uniform sampler2D t_Normal;
 
 
 uniform DirectionalLight u_DirectionalLights[MAX_DIR_LIGHTS];
@@ -127,18 +127,18 @@ void main() {
 
 
 	if (numberOfNormalMaps > 0) {
-	norm = vec3(0.0);
-		for (int i = 0; i < numberOfNormalMaps; ++i) {
-		norm += (texture(t_Normal[i], v_UV)).rgb;}
-	norm /= numberOfNormalMaps;
+
+	norm = (texture(t_Normal, v_UV)).rgb;
 	norm = normalize(norm * 2.0 - 1.0);
 	norm = normalize((v_TBN) * norm);
+
 	}
 	else {
+
 		norm = normalize(v_WorldNormal);
 	}
-
-	
+		
+		
 
 	
 

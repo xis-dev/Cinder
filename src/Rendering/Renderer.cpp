@@ -297,7 +297,7 @@ void Renderer::render(const Camera &cam)
                        break;
 
                    case Texture::Normal:
-                       uniformStr = "t_Normal[" + std::to_string(normalNr) + "]";
+                       uniformStr = "t_Normal";
                        ++normalNr;
                        break;
                    case Texture::Diffuse:
@@ -341,7 +341,14 @@ void Renderer::render(const Camera &cam)
            shader->setUniformf((materialUniformBase + "shininess").c_str(), mat->getShininess());
 
            modelSet.mesh.draw();
-	           }
+
+            for (int i = 0; i <= textureUnit; ++i)
+            {
+                glActiveTexture(GL_TEXTURE0 + i);
+                glBindTexture(GL_TEXTURE_2D, 0);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+            }
+        }
         }
 
  
