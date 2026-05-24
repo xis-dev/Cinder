@@ -1,13 +1,14 @@
 #version 330 core
-out vec4 FragColor;
+
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 BrightColor;
 
 in vec3 TexCoords;
 
 uniform samplerCube u_Skybox;
-uniform float u_Gamma; 
 
 void main()
 {    
     FragColor = texture(u_Skybox, TexCoords);
-	FragColor.rgb = pow(FragColor.rgb, vec3(1 / u_Gamma));
+    BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 }

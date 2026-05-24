@@ -1,6 +1,7 @@
 #version 330 core
 
-
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 BrightColor;
 struct Material {
 	vec3 albedo;
 	float ambient;
@@ -44,6 +45,8 @@ in vec3 v_WorldNormal;
 in vec3 v_WorldPos;
 in vec4 v_LightSpacePos;
 in mat3 v_TBN;
+in vec3 v_TangentCameraPos;
+in vec3 v_TangentFragPos;
 
 uniform vec3 u_CameraPosition;
 
@@ -52,12 +55,9 @@ uniform Material u_Material;
 uniform float u_Gamma;
 uniform float u_FarPlane;
 
-out vec4 FragColor;
 
 
 
-float near = 0.1;
-float far = 1000.0;
 
 #define MAX_POINT_LIGHTS 5
 #define MAX_SPOT_LIGHTS 1
@@ -66,6 +66,7 @@ float far = 1000.0;
 #define MAX_MAPS_SPECULAR 10
 #define MAX_MAPS_DIFFUSE 10
 #define MAX_MAPS_NORMAL 10
+#define MAX_MAPS_HEIGHT 10
 
 uniform int u_DirLightCount;
 uniform int u_PointLightCount;
@@ -74,10 +75,12 @@ uniform int u_SpotLightCount;
 uniform int u_DiffuseMapCount;
 uniform int u_SpecularMapCount;
 uniform int u_NormalMapCount;
+uniform int u_HeightMapCount;
 
 uniform sampler2D t_Specular[MAX_MAPS_SPECULAR];
 uniform sampler2D t_Diffuse[MAX_MAPS_DIFFUSE];
-uniform sampler2D t_Normal;
+uniform sampler2D t_Normal[MAX_MAPS_NORMAL];
+uniform sampler2D t_Height[MAX_MAPS_HEIGHT];
 
 
 uniform DirectionalLight u_DirectionalLights[MAX_DIR_LIGHTS];
@@ -90,6 +93,8 @@ uniform bool u_Blinn;
 uniform sampler2D u_ShadowMap;
 uniform samplerCube u_PointMap;
 
+uniform float u_ParallaxHeightScale;
+
 
 vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex);
 vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex);
@@ -97,7 +102,7 @@ vec3 calcSpotLight(SpotLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, 
 
 float dirShadowCalc(vec4 lightSpacePos, float bias);
 
-float linearizeDepth(float depth);
+//float linearizeDepth(float depth);
 
 vec3 sampleOffsetDirections[20] = vec3[]
 (
@@ -108,8 +113,11 @@ vec3 sampleOffsetDirections[20] = vec3[]
    vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
 ); 
 
+vec2 parallaxMapping(vec2 uv, vec3 viewDir);
+
 void main() {
 
+	vec3 tangentViewDir = normalize(v_TangentCameraPos - v_TangentFragPos);
 	vec3 viewDir = normalize(u_CameraPosition - v_WorldPos);
 
 
@@ -120,15 +128,32 @@ void main() {
 	int numberOfDiffuseMaps = clamp(u_DiffuseMapCount, 0, MAX_MAPS_DIFFUSE);
 	int numberOfSpecularMaps = clamp(u_SpecularMapCount, 0, MAX_MAPS_SPECULAR);
 	int numberOfNormalMaps = clamp(u_NormalMapCount, 0, MAX_MAPS_NORMAL);
+	int numberOfHeightMaps = clamp(u_HeightMapCount, 0, MAX_MAPS_HEIGHT);
 
+
+	vec2 texCoords = v_UV;
+
+
+	if (numberOfHeightMaps > 0) {
+	texCoords = parallaxMapping(v_UV, tangentViewDir);
+	texCoords = vec2
+(
+texCoords.x - floor(texCoords.x),
+texCoords.y - floor(texCoords.y)
+);
+	}
 
 
 	vec3 norm = normalize(v_WorldNormal);
 
 
 	if (numberOfNormalMaps > 0) {
+	norm = vec3(0.0);
+	for (int i = 0; i < numberOfNormalMaps; ++i) {
+	norm += (texture(t_Normal[i], texCoords)).rgb;
+	}
+	norm /= numberOfNormalMaps;
 
-	norm = (texture(t_Normal, v_UV)).rgb;
 	norm = normalize(norm * 2.0 - 1.0);
 	norm = normalize((v_TBN) * norm);
 
@@ -145,7 +170,7 @@ void main() {
 	vec3 diffuseTex = vec3(0.0);
 	if (numberOfDiffuseMaps > 0) {
 		for (int i = 0; i < numberOfDiffuseMaps; i++) {
-		diffuseTex += vec3(texture(t_Diffuse[i], v_UV));
+		diffuseTex += vec3(texture(t_Diffuse[i], texCoords));
 	}
 	}
 	else {
@@ -157,7 +182,7 @@ void main() {
 	vec3 specularTex = vec3(0.0);
 	if (numberOfSpecularMaps > 0) {
 		for (int i = 0; i < numberOfSpecularMaps; i++) {
-		specularTex += vec3(texture(t_Specular[i], v_UV));
+		specularTex += vec3(texture(t_Specular[i], texCoords));
 	}
 	}
 	else {
@@ -179,13 +204,61 @@ vec3 ambientCol = vec3(0.05, 0.05, 0.08);
 		result += calcPointLight(u_PointLights[i], norm, viewDir, diffuseTex, specularTex);
 	}
 
-				FragColor = vec4(result * u_Material.albedo, 1.0) ;
-	FragColor.rgb = pow(FragColor.rgb, vec3(1.0/u_Gamma));
+	FragColor = vec4(result * u_Material.albedo, 1.0) ;
+	float brightness = dot(FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+    if(brightness > 1.0)
+        BrightColor = vec4(FragColor.rgb, 1.0);
+    else
+        BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 	return;
 
 
 
 
+}
+
+vec2 parallaxMapping(vec2 uv, vec3 viewDir) {
+
+    // number of depth layers
+	const float minLayers = 8.0;
+const float maxLayers = 32.0;
+float numLayers = mix(maxLayers, minLayers, max(dot(vec3(0.0, 0.0, 1.0), viewDir), 0.0)); 
+    // calculate the size of each layer
+    float layerDepth = 1.0 / numLayers;
+    // depth of current layer
+    float currentLayerDepth = 0.0;
+
+   float height = texture(t_Height[0], uv).r;
+
+    vec2 p = vec2(0.0);
+        p = viewDir.xy * (height * u_ParallaxHeightScale);
+
+
+	    vec2 deltaTexCoords = p / numLayers;
+	vec2  currentTexCoords  = uv;
+float currentDepthMapValue = texture(t_Height[0], currentTexCoords).r;
+  
+while(currentLayerDepth < currentDepthMapValue)
+{
+    // shift texture coordinates along direction of P
+    currentTexCoords -= deltaTexCoords;
+    // get depthmap value at current texture coordinates
+    currentDepthMapValue = texture(t_Height[0], currentTexCoords).r;  
+    // get depth of next layer
+    currentLayerDepth += layerDepth;  
+}
+vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
+
+// get depth after and before collision for linear interpolation
+float afterDepth  = currentDepthMapValue - currentLayerDepth;
+float beforeDepth = texture(t_Height[0], prevTexCoords).r - currentLayerDepth + layerDepth;
+ 
+// interpolation of texture coordinates
+float weight = afterDepth / (afterDepth - beforeDepth);
+vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
+
+return finalTexCoords;  
+		
 }
 
 float dirShadowCalc(vec4 lightSpacePos, float bias) {
@@ -333,10 +406,10 @@ vec3 calcSpotLight(SpotLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, 
 
 	return   (diffuse + specular ) * light.intensity;
 }
-
-float linearizeDepth(float depth) 
-{
-	float z = depth * 2.0 - 1.0;
-	return (2.0 * near * far) / (far + near - z * (far - near));
-}
-
+//
+//float linearizeDepth(float depth)
+//{
+//	float z = depth * 2.0 - 1.0;
+//	return (2.0 * near * far) / (far + near - z * (far - near));
+//}
+//

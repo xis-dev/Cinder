@@ -9,6 +9,7 @@ layout (location = 4) in vec3 a_BitTangent;
 uniform mat4 u_ModelMatrix;
 uniform mat4 u_MVPMatrix;
 uniform mat4 u_LightSpaceMatrix;
+uniform vec3 u_CameraPosition;
 
 
 
@@ -17,6 +18,8 @@ out vec3 v_WorldPos;
 out vec3 v_WorldNormal;
 out vec4 v_LightSpacePos;
 out mat3 v_TBN;
+out vec3 v_TangentCameraPos;
+out vec3 v_TangentFragPos;
 
 void main() {
 
@@ -29,7 +32,9 @@ void main() {
 	vec3 T = normalize(vec3(u_ModelMatrix * vec4(a_Tangent, 0.0)));
    vec3 B = normalize(vec3(u_ModelMatrix * vec4(a_BitTangent, 0.0)));
    vec3 N = normalize(vec3(u_ModelMatrix * vec4(a_Normal,  0.0)));
-   mat3 TBN = mat3(T, B, N);
+   mat3 TBN = transpose(mat3(T, B, N));
 
-   v_TBN = TBN;
+   v_TangentCameraPos = TBN * u_CameraPosition;
+   v_TangentFragPos = TBN * v_WorldPos;
+   v_TBN = transpose(TBN);
 }																			 

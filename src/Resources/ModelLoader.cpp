@@ -13,7 +13,7 @@
 Handle<Model> ModelLoader::loadModel(const std::string &file)
 {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(file, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
+    const aiScene* scene = importer.ReadFile(file, aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
@@ -59,6 +59,7 @@ void ModelLoader::processMesh(Model& modelToLoadInto, aiMesh *mesh, const aiScen
 		if (mesh->HasTangentsAndBitangents())
 		{
 			vertex.tangent = glm::vec3(mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z);
+			// assimp loads into a right handed system, opengl uses left handed
 			vertex.bitangent = glm::vec3(-mesh->mBitangents[i].x, -mesh->mBitangents[i].y, -mesh->mBitangents[i].z);
 		}
 		else
@@ -99,11 +100,12 @@ void ModelLoader::processMesh(Model& modelToLoadInto, aiMesh *mesh, const aiScen
 		std::vector<Handle<Texture>> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, Texture::Diffuse, directory);
 
 		ts.insert(ts.end(), diffuseMaps.begin(), diffuseMaps.end());
+
 		std::vector<Handle<Texture>> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, Texture::Specular, directory);
 
 		ts.insert(ts.end(), specularMaps.begin(), specularMaps.end());
 
-		std::vector<Handle<Texture>> normalMps = loadMaterialTextures(material, aiTextureType_HEIGHT, Texture::Normal, directory);
+		std::vector<Handle<Texture>> normalMps = loadMaterialTextures(material, aiTextureType_NORMALS, Texture::Normal, directory);
 
 		ts.insert(ts.end(), normalMps.begin(), normalMps.end());
 

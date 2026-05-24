@@ -144,7 +144,6 @@ void Engine::init(GLFWwindow*& window)
 	{
 		std::cout << "FAILED TO INITIALIZE GLAD. \n";
 	}
-
 	m_modelLoader = new ModelLoader(m_assetManager);
 
 	glfwSwapInterval(0);
@@ -181,27 +180,23 @@ void Engine::init(GLFWwindow*& window)
 	createObjectIcons();
 
 
-	auto robot = loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/ship-in-a-bottle/source/full_scene.fbx");
-	loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/robot/LP_Sketchfab.obj");
+	auto robot = loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/matikantenhauser/scene.gltf");
 	auto robotEnt = m_currentScene->createEntity<MeshEntity>("Robot", m_assetManager->models.get(robot));
-
-	createFloor();
-
-
-	auto robotEn2t = m_currentScene->createEntity<MeshEntity>("Robot2", m_assetManager->models.get(robot));
+	//robotEnt->setRotation(glm::vec3(1.0f, 0.0f, 0.0f), -90.0f);
+	robotEnt->setScale(15.0f);
 
 	createFloor();
 
 	//loadModel("c:/users/pc/desktop/c++/glscene/models/Chest_LowPoly.obj", "Chest", "default", glm::vec3(0.0f, 10.0f, 0.0f), glm::vec3(5.0f));
 
-
-	//for (int i = 1; i < 10; ++i)
-	//{
-	//	createCube("cube", "container",
-	//		cubePositions[i], 20.0f * i,
-	//		rotationAxes[i].getNormalized(),
-	//		glm::vec3(2.0f));
-	//}
+	//
+	// for (int i = 1; i < 10; ++i)
+	// {
+	// 	createCube("cube", "container",
+	// 		cubePositions[i], 20.0f * i,
+	// 		glm::normalize(rotationAxes[i]),
+	// 		glm::vec3(2.0f));
+	// }
 
 	createDirectionalLight("DirectionalLight", glm::vec3(3.0f, -10.0f, 3.0f));
 
@@ -211,7 +206,7 @@ void Engine::init(GLFWwindow*& window)
 
 	}
 
-
+	//auto* cube = m_currentScene->createEntity<MeshEntity>("Cube", m_assetManager->models.get("cube"));
 
 	
 
@@ -378,8 +373,13 @@ void Engine::imguiUpdate()
 
 	}
 
+	ImGui::Checkbox("Swap buffer", &renderer->fbo1);
 	ImGui::DragFloat("Gamma Correction exp", &renderer->gamma, 0.1f);
+	ImGui::DragFloat("Parallax Map Height", &renderer->parallaxScale, 0.1f);
+	ImGui::DragFloat("HDR Exposure", &renderer->hdrExposure, 0.1f);
+	ImGui::Checkbox("Bloom", &renderer->bloom);
 	ImGui::Checkbox("Grid", &renderer->drawGrid);
+	ImGui::Checkbox("HDR", &renderer->hdr);
 	ImGui::Checkbox("Blinn-Phong", &renderer->blinnLighting);
 	ImGui::Checkbox("Draw Cubemap", &renderer->cubeMapEnabled);
 	ImGui::Checkbox("Enable Backface Culling", &renderer->cullBackface);
@@ -421,8 +421,9 @@ void Engine::createTextures()
 {
 	m_assetManager->textures.add(Texture("assets/Textures/empty.jpg"), "default");
 	m_assetManager->textures.add(Texture("assets/Textures/aphex.gif"), "aphex");
-	auto floorTex = m_assetManager->textures.add(Texture("assets/Textures/brickwall.jpg", Texture::Diffuse, true, GL_REPEAT), "floor");
-	m_assetManager->textures.add(Texture("assets/Textures/brickwall_normal.jpg", Texture::Normal, true, GL_REPEAT), "floor_normal");
+	auto floorTex = m_assetManager->textures.add(Texture("assets/Textures/bricks2.jpg", Texture::Diffuse, true, GL_REPEAT), "floor");
+	m_assetManager->textures.add(Texture("assets/Textures/bricks2_normal.jpg", Texture::Normal, true, GL_REPEAT), "floor_normal");
+	m_assetManager->textures.add(Texture("assets/Textures/bricks2_disp.jpg", Texture::Height, true, GL_REPEAT), "floor_disp");
 	m_assetManager->textures.add(Texture("assets/Textures/container_diffuse.png"), "container");
 }
 
@@ -441,11 +442,18 @@ void Engine::createShaders()
 	m_assetManager->shaders.add(Shader("assets/Shaders/shadow/pointMap.vert", "assets/Shaders/shadow/pointMap.frag", "assets/Shaders/shadow/pointMap.geom"), "pointMap");
 	m_assetManager->shaders.add(Shader("assets/Shaders/shadow/pointMap.vert", "assets/Shaders/shadow/pointMap.frag", "assets/Shaders/shadow/pointMap.geom"), "pointMap");
 	m_assetManager->shaders.add(Shader("assets/Shaders/shadow/pointMap.vert", "assets/Shaders/shadow/pointMap.frag", "assets/Shaders/shadow/pointMap.geom"), "pointMap");
+	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/hdr.frag"), "HDR");
+	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/bloomBlur.frag"), "bloomBlur");
+	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/bloom.frag"), "bloom");
+
+
 }
 
 void Engine::createModels()
 {
 	Handle<Material> container = m_assetManager->materials.getHandle("container");
+	auto* cont = m_assetManager->materials.get(container);
+	cont->setColor(1.0f, 1.0f, 1.0f);
 	Handle<Material> def = m_assetManager->materials.getHandle("default");
 	Handle<Material> floor = m_assetManager->materials.getHandle("floor");
 	m_assetManager->models.add(Model(ModelSet{std::move(Mesh(Cube::vertices, Cube::indices)), container}), "cube");
@@ -468,6 +476,7 @@ void Engine::createMaterials()
 	m_assetManager->materials.get(floorMat)->setShininess(16.0f);
 	m_assetManager->materials.get(floorMat)->setSpecular(0.15f);
 	m_assetManager->materials.get(floorMat)->addTexture(m_assetManager->textures.getHandle("floor_normal"));
+	m_assetManager->materials.get(floorMat)->addTexture(m_assetManager->textures.getHandle("floor_disp"));
 
 	Handle<Texture> containerTex = m_assetManager->textures.getHandle("container");
 
@@ -495,6 +504,11 @@ void Engine::createFloor()
 {
 	auto* floor = m_currentScene->createEntity<MeshEntity>("Floor", m_assetManager->models.get("floor"));
 	floor->setScale(35.0f);
+	//for (auto& modelSet : floor->getModel()->getMeshes())
+	//{
+	//	auto* mater = m_assetManager->materials.get(modelSet.mat);
+	//	mater->setColor(10.0f, 5.0f, 15.0f);
+	//}
 }
 
 void Engine::addMeshToScene(Model* model, glm::vec3 position)

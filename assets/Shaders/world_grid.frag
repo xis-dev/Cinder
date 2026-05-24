@@ -1,5 +1,8 @@
 #version 330 core
 
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 BrightColor;
+
 in vec3 v_WorldPos;
 
 uniform vec3 u_CameraPosition;
@@ -11,7 +14,7 @@ uniform vec4 gridColorThick = vec4(0.8, 0.8, 0.8, 1.0);
 uniform float minPixelsBetweenCell = 2.0;
 
 uniform float u_Gamma;
-out vec4 FragColor;
+
 
 
 float log10(float x)
@@ -95,4 +98,6 @@ void main()
 	if (color.a < 0.09) discard;
 	FragColor = color; 
 	FragColor.rgb = pow(FragColor.rgb, vec3(1 / u_Gamma));
+
+	BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 }

@@ -24,7 +24,8 @@ public:
 	enum Type {
 		Diffuse,
 		Specular,
-		Normal
+		Normal, 
+		Height
 	};
 
 private:
@@ -65,8 +66,8 @@ public:
 	 void use() const;
 	static void unbind(GLenum activeTexUnit);
 	static unsigned createCubemap(const std::vector<std::string>& cubeFaces);
-	static unsigned createDepthMap(const int w, const int h);
-	static unsigned createDepthCubemap(const int w, const int h);
+	static unsigned createEmptyTex(const int w, const int h, GLenum component, GLenum desiredFormat, GLenum type = GL_FLOAT);
+	static unsigned createEmptyCubemap(const int w, const int h, GLenum component, GLenum desiredFormat, GLenum type = GL_FLOAT);
 
 	virtual void destroy() override;
 

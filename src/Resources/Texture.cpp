@@ -11,8 +11,8 @@
 Texture::Texture(const std::string& fileName , Texture::Type texType, bool flipOnLoad,
                  GLenum wrapType,unsigned desiredFormat): m_type(texType)
 {
-	m_id = loadTextureFile(fileName, texType, flipOnLoad, wrapType, desiredFormat);
 	m_location = FileManager::getCanonicalPath(fileName);
+	m_id = loadTextureFile(m_location, texType, flipOnLoad, wrapType, desiredFormat);
 }
 
 
@@ -169,34 +169,35 @@ unsigned Texture::createCubemap(const std::vector<std::string>& cubeFaces)
 	return id;
 }
 
-unsigned Texture::createDepthMap(const int w, const int h)
+unsigned Texture::createEmptyTex(const int w, const int h, GLenum component, GLenum desiredFormat, GLenum type)
 {
 	unsigned id;
 	glGenTextures(1, &id);
 	glBindTexture(GL_TEXTURE_2D, id);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, (GLint)component, w, h, 0, desiredFormat, type, NULL);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	//float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	//glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
 
 
 	return id;
 }
 
-unsigned Texture::createDepthCubemap(const int w, const int h)
+unsigned Texture::createEmptyCubemap(const int w, const int h, GLenum component, GLenum desiredFormat, GLenum type)
 {
 	unsigned id;
 	glGenTextures(1, &id);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, id);
 	for (unsigned i = 0; i < 6; ++i)
 	{
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, (GLint)component, w, h, 0, desiredFormat, type, nullptr);
 	}
 
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

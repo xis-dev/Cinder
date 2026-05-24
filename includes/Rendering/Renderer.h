@@ -15,7 +15,7 @@ class Texture;
 class PointLight;
 
 class Renderer
-{
+{   
 
 
 public:
@@ -35,6 +35,10 @@ public:
     unsigned cubeMapTex;
     unsigned addonVAO{};
     
+    unsigned hdrFBO, hdrDepthStencil;
+    unsigned hdrColorTexs[2];
+    unsigned pingPongFBOs[2];
+    unsigned pingPongColorBuffers[2];
     unsigned skyBoxVAO, skyBoxVBO, skyBoxEBO;
     unsigned shadowFBO, shadowTex;
     unsigned pointShadowFBO, pointShadowTex;
@@ -42,21 +46,31 @@ public:
     float farPlane{};
 
     bool drawWireframe{};
-    bool cullBackface{};
+    bool cullBackface{true};
     bool blinnLighting{true};
     bool cubeMapEnabled{ true };
     bool drawGrid{ true };
+    bool hdr{ true };
+    bool fbo1{};
 
     std::vector<glm::mat4> shadowTransforms{};
 
     float gamma{ 2.2f };
+    float parallaxScale{ 0.2f };
+    float hdrExposure{ 1.0f };
+    bool bloom{true};
 private:
     void drawAddon(int indexCount);
     void createSkybox();
     void drawSkybox(const Camera& cam);
+    unsigned createFBO(unsigned* colorTexts, unsigned depthStencil);
+    void createPingPongFBOs();
     unsigned create2DShadowFBO(unsigned depthTex);
     unsigned createCubemapShadowFBO(unsigned depthCubemap);
     void setupPointMatrices(PointLight* light, const int w, const int h);
+    void renderScene(const Camera &cam, unsigned fboToRenderTo, int sceneW, int sceneH);
+    void renderShadowMap();
+    void renderPointMap();
 public:
     void init(GLFWwindow* win, AssetManager* manager, Scene* scene);
     void render(const Camera& cam);
