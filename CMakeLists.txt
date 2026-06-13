@@ -127,7 +127,8 @@ set(PROJECT_SOURCES
      src/Rendering/Scene.cpp
     "src/Resources/Model.cpp"
         src/Rendering/Renderer.cpp
-        src/Resources/ModelLoader.cpp)
+        src/Resources/ModelLoader.cpp
+        src/Utilities/FileLoader.cpp)
 
 set(IMGUI_SOURCES
         ${imgui_SOURCE_DIR}/imgui.cpp

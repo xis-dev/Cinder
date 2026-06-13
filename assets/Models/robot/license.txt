@@ -1,0 +1,11 @@
+Model Information:
+* title:	Vilhelm 13 [Low res textures]
+* source:	https://sketchfab.com/3d-models/vilhelm-13-low-res-textures-cb49a1f71ba54cad8e9dc09da8ef47cd
+* author:	artjamayka (https://sketchfab.com/artjamayka)
+
+Model License:
+* license type:	CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)
+* requirements:	Author must be credited. No commercial use.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Vilhelm 13 [Low res textures]" (https://sketchfab.com/3d-models/vilhelm-13-low-res-textures-cb49a1f71ba54cad8e9dc09da8ef47cd) by artjamayka (https://sketchfab.com/artjamayka) licensed under CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)

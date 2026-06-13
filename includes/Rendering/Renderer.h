@@ -34,7 +34,12 @@ public:
     };
     unsigned cubeMapTex;
     unsigned addonVAO{};
-    
+
+    unsigned gBuffer;
+    unsigned gPosition, gColorSpec, gNormal, gDepthStencil, gMaterial;
+    unsigned ssaoFBO, ssaoColor, ssaoDepth, ssaoNoise;
+    unsigned ssaoBlurFBO, ssaoBlurColor;
+    unsigned deferredFbo, deferredColor, deferredDepthStencil;
     unsigned hdrFBO, hdrDepthStencil;
     unsigned hdrColorTexs[2];
     unsigned pingPongFBOs[2];
@@ -42,6 +47,9 @@ public:
     unsigned skyBoxVAO, skyBoxVBO, skyBoxEBO;
     unsigned shadowFBO, shadowTex;
     unsigned pointShadowFBO, pointShadowTex;
+
+    int* currentWindowWidth;
+    int* currentWindowHeight;
 
     float farPlane{};
 
@@ -54,12 +62,17 @@ public:
     bool fbo1{};
 
     std::vector<glm::mat4> shadowTransforms{};
+    std::vector<glm::vec3> ssaoKernel;
 
     float gamma{ 2.2f };
+    float ssaoStr{2.0f};
+    bool useSSAO{true};
     float parallaxScale{ 0.2f };
     float hdrExposure{ 1.0f };
     bool bloom{true};
 private:
+    void initGBuffer(unsigned& framebuffer, unsigned& position, unsigned& colorSpec, unsigned& normal, const int w, const int h);
+    void initSSAO(unsigned& fb, unsigned& c, unsigned& d_st);
     void drawAddon(int indexCount);
     void createSkybox();
     void drawSkybox(const Camera& cam);
@@ -71,8 +84,9 @@ private:
     void renderScene(const Camera &cam, unsigned fboToRenderTo, int sceneW, int sceneH);
     void renderShadowMap();
     void renderPointMap();
+    std::vector<glm::vec3> getSsaoKernel();
 public:
-    void init(GLFWwindow* win, AssetManager* manager, Scene* scene);
+    void init(GLFWwindow* win, AssetManager* manager, Scene* scene, int* width, int* height);
     void render(const Camera& cam);
     void destroy();
 

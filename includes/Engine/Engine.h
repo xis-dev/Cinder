@@ -3,11 +3,9 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-#include <iostream>
-#include <map>
+
+
+
 
 #include "Camera.h"
 #include "Cube.h"
@@ -20,27 +18,34 @@
 #include "Primitives/Plane.h"
 #include "Utilities/IconRegistry.h"
 #include "Rendering/Scene.h"
-#include <memory>
 
 #include "Renderer.h"
-#include "assimp/Importer.hpp"
-#include "assimp/scene.h"
-#include "assimp/postprocess.h"
-
 #include "Resources/ResourceManager.h"
 #include "Utilities/FileManager.h"
 #include "Utilities/AssetManager.h"
 
 #include "ModelLoader.h"
-
 #include "Resources/Handle.h"
+
+#include "assimp/Importer.hpp"
+#include "assimp/scene.h"
+#include "assimp/postprocess.h"
+
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
+#include <iostream>
+#include <fstream>
+#include <map>
+#include <memory>
 
 
 class Shader;
 class Renderer;
 class Scene;
 
-
+class FileLoader;
 class Engine
 {
 public:
@@ -71,6 +76,7 @@ private:
 
 	AssetManager*  m_assetManager = new AssetManager();
 
+	static std::unique_ptr<FileLoader> m_FileLoader;
 	ModelLoader* m_modelLoader;
 
 	std::map<float, MeshEntity*> transparentObj{};
@@ -119,6 +125,7 @@ private:
 	static void frameBufferSizeCallback(GLFWwindow* window, int width, int height);
 	static void mouseCallback(GLFWwindow* window, double xPos, double yPos);
 	static void scrollCallback(GLFWwindow* window, double xOffset, double yOffset);
+	static void fileDropCallback(GLFWwindow* window, int count, const char** paths);
 public:
 	 void run(const int w, const int h, const std::string& title);
 

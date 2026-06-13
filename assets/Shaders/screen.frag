@@ -4,7 +4,10 @@ out vec4 FragColor;
 
 in vec2 v_UV;
 
-uniform sampler2D u_ScreenTexture;
+uniform sampler2D u_Pos;
+uniform sampler2D u_ColSpec;
+uniform sampler2D u_Norm;
+
 
 const float offset = 1.0/300.0;
 
@@ -38,8 +41,29 @@ void main()	{
 //        col += sampleTex[i] * kernel[i];
 //    }
 
-    vec3 col = texture(u_ScreenTexture, v_UV).rgb;
-    FragColor = vec4(col, 1.0);
+
+    if (v_UV.x < 0.5 && v_UV.y > 0.5) {
+        FragColor = texture(u_Pos, fract(v_UV * 2.0));
+        return;
+    }
+
+if (v_UV.x < 0.5 && v_UV.y < 0.5) {
+    FragColor = texture(u_Norm, fract(v_UV * 2.0));
+    return;
+}
+
+if (v_UV.x > 0.5 && v_UV.y > 0.5) {
+    FragColor = vec4(texture(u_ColSpec, fract(v_UV * 2.0)).rgb, 1.0);
+    return;
+}
+
+if (v_UV.x > 0.5 && v_UV.y < 0.5) {
+    FragColor = vec4(vec3(texture(u_ColSpec, fract(v_UV * 2.0)).a), 1.0);
+    return;
+}
+//
+//    vec3 col = texture(u_ScreenTexture, v_UV).rgb;
+//    FragColor = vec4(col, 1.0);
 
 
 }

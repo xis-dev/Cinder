@@ -16,8 +16,11 @@
 
 
 #define GLM_ENABLE_EXPERIMENTAL
+#include "FileLoader.h"
 #include "glm/gtx/norm.hpp"
 GLFWwindow* Engine::m_window{};
+
+std::unique_ptr<FileLoader> Engine::m_FileLoader{};
 
 double Engine::xMouseOffset{};
 double Engine::yMouseOffset{};
@@ -70,7 +73,21 @@ glm::vec3 pointLightPositions[] = {
 	glm::vec3( 0.7f,  2.0f,  2.0f),
 	glm::vec3( 2.3f, -3.3f, -4.0f),
 	glm::vec3(-4.0f,  2.0f, -12.0f),
-	glm::vec3( 0.0f,  0.0f, -3.0f)
+	glm::vec3( 0.0f,  0.0f, -3.0f),
+	glm::vec3(4.0f,  2.0f, -2.0f),
+	glm::vec3(-4.0f,  24.0f, 12.0f),
+	glm::vec3(14.0f,  -2.0f, -12.0f),
+	glm::vec3(0.0f,  0.0f, 2.0f),
+	glm::vec3(-15.0f,  -5.0f, 0.0f),	glm::vec3( 0.7f,  2.0f,  2.0f),
+	glm::vec3( 2.3f, -3.3f, -4.0f),
+	glm::vec3(-4.0f,  2.0f, -12.0f),
+	glm::vec3( 0.0f,  0.0f, -3.0f),
+	glm::vec3(4.0f,  2.0f, -2.0f),
+	glm::vec3(-4.0f,  24.0f, 12.0f),
+	glm::vec3(14.0f,  -2.0f, -12.0f),
+	glm::vec3(0.0f,  0.0f, 2.0f),
+	glm::vec3(-15.0f,  -5.0f, 0.0f)
+
 };
 void Engine::run(const int w, const int h, const std::string& title)
 {
@@ -118,7 +135,7 @@ Engine::~Engine()
 
 void Engine::init(GLFWwindow*& window)
 {
-
+	
 	// initialize glfw and give window hints for the version and the opengl profile we want to use
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -161,6 +178,7 @@ void Engine::init(GLFWwindow*& window)
 	glfwSetScrollCallback         (window, Engine::scrollCallback);
 	glfwSetCursorPosCallback      (window, Engine::mouseCallback);
 	glfwSetKeyCallback            (window, Engine::keyCallback);
+	glfwSetDropCallback		      (window, Engine::fileDropCallback);
 	glfwSetInputMode              (window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 
@@ -168,7 +186,7 @@ void Engine::init(GLFWwindow*& window)
 	Plane::computeTangents();
 	imguiInit();
 
-	renderer->init(m_window, m_assetManager, m_currentScene);
+	renderer->init(m_window, m_assetManager, m_currentScene, &scrWidth, &scrHeight);
 
 
 	// as is obvious, materials must be created after shaders and textures
@@ -373,11 +391,11 @@ void Engine::imguiUpdate()
 
 	}
 
-	ImGui::Checkbox("Swap buffer", &renderer->fbo1);
+	ImGui::DragFloat("SSAO Strength", &renderer->ssaoStr, 0.1f);
 	ImGui::DragFloat("Gamma Correction exp", &renderer->gamma, 0.1f);
 	ImGui::DragFloat("Parallax Map Height", &renderer->parallaxScale, 0.1f);
 	ImGui::DragFloat("HDR Exposure", &renderer->hdrExposure, 0.1f);
-	ImGui::Checkbox("Bloom", &renderer->bloom);
+	ImGui::Checkbox("SSAO", &renderer->useSSAO);
 	ImGui::Checkbox("Grid", &renderer->drawGrid);
 	ImGui::Checkbox("HDR", &renderer->hdr);
 	ImGui::Checkbox("Blinn-Phong", &renderer->blinnLighting);
@@ -432,7 +450,7 @@ void Engine::createShaders()
 {
 	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/default_lit.frag"), "lit");
 	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/default_unlit.frag"), "unlit");
-	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/textured_lit.frag"), "textured_lit");
+	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/deferred/deferred.frag"), "textured_lit");
 	m_assetManager->shaders.add(Shader("assets/Shaders/world_grid.vert", "assets/Shaders/world_grid.frag"), "grid");
 	m_assetManager->shaders.add(Shader("assets/Shaders/item_icon.vert", "assets/Shaders/item_icon.frag"), "icon");
 	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/singleColor.frag"), "border");
@@ -440,11 +458,15 @@ void Engine::createShaders()
 	m_assetManager->shaders.add(Shader("assets/Shaders/shadow/shadowMap.vert", "assets/Shaders/shadow/shadowMap.frag"), "shadowMap");
 
 	m_assetManager->shaders.add(Shader("assets/Shaders/shadow/pointMap.vert", "assets/Shaders/shadow/pointMap.frag", "assets/Shaders/shadow/pointMap.geom"), "pointMap");
-	m_assetManager->shaders.add(Shader("assets/Shaders/shadow/pointMap.vert", "assets/Shaders/shadow/pointMap.frag", "assets/Shaders/shadow/pointMap.geom"), "pointMap");
-	m_assetManager->shaders.add(Shader("assets/Shaders/shadow/pointMap.vert", "assets/Shaders/shadow/pointMap.frag", "assets/Shaders/shadow/pointMap.geom"), "pointMap");
 	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/hdr.frag"), "HDR");
 	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/bloomBlur.frag"), "bloomBlur");
 	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/bloom.frag"), "bloom");
+
+	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/deferred/deferred.frag"), "deferredShader");
+	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/deferred/lightPass.frag"), "deferredLightPass");
+
+	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/ssao/ssao.frag"), "ssaoShader");
+	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/ssao/ssaoBlur.frag"), "ssaoBlur");
 
 
 }
@@ -589,6 +611,19 @@ void Engine::mouseCallback(GLFWwindow* window, double xPos, double yPos)
 void Engine::scrollCallback(GLFWwindow* window, double xOffset, double yOffset)
 {
 	scrollOffset = yOffset;
+}
+
+void Engine::fileDropCallback(GLFWwindow *window, int count, const char **paths)
+{
+	for (int i = 0; i < count; ++i)
+	{
+
+		if (m_FileLoader->loadFile(paths[i]))
+		{
+		}
+
+	}
+
 }
 
 

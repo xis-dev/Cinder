@@ -44,6 +44,7 @@ public:
 	void setUniformf(const char* name, float value) const;
 	void setUniformMat4(const char* name, glm::mat4 value) const;
 	void setUniformVec3(const char* name, glm::vec3 value) const;
+	void setUniformVec3Array(const char* name, const glm::vec3* data, int count) const;
 	void use() const;
 
 

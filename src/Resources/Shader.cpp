@@ -123,6 +123,10 @@ void Shader::setUniformVec3(const char* name, glm::vec3 value) const
 	glUniform3fv(uniformLoc, 1, glm::value_ptr(value));
 }
 
+void Shader::setUniformVec3Array(const char* name, const glm::vec3* data, int count) const {
+	auto loc = glGetUniformLocation(m_id, name);
+	glUniform3fv(loc, count, glm::value_ptr(data[0]));
+}
 
 void Shader::use() const
 {

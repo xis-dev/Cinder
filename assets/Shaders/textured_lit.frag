@@ -87,7 +87,6 @@ uniform DirectionalLight u_DirectionalLights[MAX_DIR_LIGHTS];
 uniform PointLight u_PointLights[MAX_POINT_LIGHTS];
 uniform SpotLight u_SpotLights[MAX_SPOT_LIGHTS];
 
-uniform bool u_cullBackface;
 uniform bool u_Blinn;
 
 uniform sampler2D u_ShadowMap;
@@ -113,7 +112,7 @@ vec3 sampleOffsetDirections[20] = vec3[]
    vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
 ); 
 
-vec2 parallaxMapping(vec2 uv, vec3 viewDir);
+vec2 parallaxMapping(vec2 uv, vec3 viewDir, int heightMapCount);
 
 void main() {
 
@@ -135,7 +134,7 @@ void main() {
 
 
 	if (numberOfHeightMaps > 0) {
-	texCoords = parallaxMapping(v_UV, tangentViewDir);
+	texCoords = parallaxMapping(v_UV, tangentViewDir, numberOfHeightMaps);
 	texCoords = vec2
 (
 texCoords.x - floor(texCoords.x),
@@ -162,10 +161,10 @@ texCoords.y - floor(texCoords.y)
 
 		norm = normalize(v_WorldNormal);
 	}
-		
-		
 
-	
+
+
+
 
 	vec3 diffuseTex = vec3(0.0);
 	if (numberOfDiffuseMaps > 0) {
@@ -174,10 +173,10 @@ texCoords.y - floor(texCoords.y)
 	}
 	}
 	else {
-	diffuseTex = vec3(1.0);	
+	diffuseTex = vec3(1.0);
 	}
 	diffuseTex /= max(numberOfDiffuseMaps, 1);
-	
+
 
 	vec3 specularTex = vec3(0.0);
 	if (numberOfSpecularMaps > 0) {
@@ -212,55 +211,57 @@ vec3 ambientCol = vec3(0.05, 0.05, 0.08);
         BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 	return;
 
-
-
-
 }
 
-vec2 parallaxMapping(vec2 uv, vec3 viewDir) {
+vec2 parallaxMapping(vec2 uv, vec3 viewDir, int heightMapCount) {
 
-    // number of depth layers
+	// number of depth layers
 	const float minLayers = 8.0;
-const float maxLayers = 32.0;
-float numLayers = mix(maxLayers, minLayers, max(dot(vec3(0.0, 0.0, 1.0), viewDir), 0.0)); 
-    // calculate the size of each layer
-    float layerDepth = 1.0 / numLayers;
-    // depth of current layer
-    float currentLayerDepth = 0.0;
+	const float maxLayers = 32.0;
 
-   float height = texture(t_Height[0], uv).r;
+	vec2 finalTexCoords;
+	for (int i = 0; i < heightMapCount; i++) {
+		float numLayers = mix(maxLayers, minLayers, max(dot(vec3(0.0, 0.0, 1.0), viewDir), 0.0));
+		// calculate the size of each layer
+		float layerDepth = 1.0 / numLayers;
+		// depth of current layer
+		float currentLayerDepth = 0.0;
 
-    vec2 p = vec2(0.0);
-        p = viewDir.xy * (height * u_ParallaxHeightScale);
+		float height = texture(t_Height[i], uv).r;
+
+		vec2 p = vec2(0.0);
+		p = viewDir.xy * (height * u_ParallaxHeightScale);
 
 
-	    vec2 deltaTexCoords = p / numLayers;
-	vec2  currentTexCoords  = uv;
-float currentDepthMapValue = texture(t_Height[0], currentTexCoords).r;
-  
-while(currentLayerDepth < currentDepthMapValue)
-{
-    // shift texture coordinates along direction of P
-    currentTexCoords -= deltaTexCoords;
-    // get depthmap value at current texture coordinates
-    currentDepthMapValue = texture(t_Height[0], currentTexCoords).r;  
-    // get depth of next layer
-    currentLayerDepth += layerDepth;  
+		vec2 deltaTexCoords = p / numLayers;
+		vec2  currentTexCoords  = uv;
+		float currentDepthMapValue = texture(t_Height[i], currentTexCoords).r;
+
+		while(currentLayerDepth < currentDepthMapValue)
+		{
+			// shift texture coordinates along direction of P
+			currentTexCoords -= deltaTexCoords;
+			// get depthmap value at current texture coordinates
+			currentDepthMapValue = texture(t_Height[i], currentTexCoords).r;
+			// get depth of next layer
+			currentLayerDepth += layerDepth;
+		}
+		vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
+
+		// get depth after and before collision for linear interpolation
+		float afterDepth  = currentDepthMapValue - currentLayerDepth;
+		float beforeDepth = texture(t_Height[i], prevTexCoords).r - currentLayerDepth + layerDepth;
+
+		// interpolation of texture coordinates
+		float weight = afterDepth / (afterDepth - beforeDepth);
+		finalTexCoords += prevTexCoords * weight + currentTexCoords * (1.0 - weight);
+
+	}
+	finalTexCoords /= heightMapCount;
+
+	return finalTexCoords;
+
 }
-vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
-
-// get depth after and before collision for linear interpolation
-float afterDepth  = currentDepthMapValue - currentLayerDepth;
-float beforeDepth = texture(t_Height[0], prevTexCoords).r - currentLayerDepth + layerDepth;
- 
-// interpolation of texture coordinates
-float weight = afterDepth / (afterDepth - beforeDepth);
-vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
-
-return finalTexCoords;  
-		
-}
-
 float dirShadowCalc(vec4 lightSpacePos, float bias) {
 	vec3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
 	projCoords = projCoords * 0.5 + 0.5;
