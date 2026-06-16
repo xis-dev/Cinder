@@ -73,6 +73,13 @@ set (INCLUDE_DIRS
     includes/Utilities
     
 )
+
+set (MATH
+        includes/Math/Vec2.h
+        includes/Math/Vec4.h
+        src/Math/Mat4.cpp
+        includes/Math/Quaternion.h
+)
 set (HEADER_SOURCES
     includes/Graphics/Vertex.h
     includes/Primitives/Cube.h
@@ -87,10 +94,10 @@ set (HEADER_SOURCES
 
     includes/Resources/Model.h
         includes/Utilities/AssetManager.h
-
  "includes/Resources/Handle.h" "includes/Primitives/Skybox.h" "includes/Primitives/Quad.h")
 
 set(PROJECT_SOURCES
+     ${MATH}
      src/main.cpp
 
      src/Engine/Engine.cpp

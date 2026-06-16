@@ -1,97 +1,161 @@
 #pragma once
+
+
+#include "CinderMath.h"
 #include <cmath>
-#include <glm/vec2.hpp>
-#include <stdexcept>
-
-
+#include <iostream>
 
 
 template <typename T>
+requires std::is_arithmetic_v<T>
 struct Vec2
 {
-
 public:
-    Vec2() = default;
+    Vec2(T val): x(val), y(val){}
+
+    Vec2(T x_val, T y_val): x(x_val), y(y_val){}
+
     T x{};
     T y{};
-    Vec2(T x_val, T y_val): x(x_val), y(y_val){}
-    Vec2(T scalar): x(scalar), y(scalar){}
 
-     operator glm::vec2() const
+// private:
+//     double magnitude{};
+
+public:
+    [[nodiscard]]
+    double magnitude() const
     {
-        return glm::vec2(x, y);
+        return  std::sqrt((x * x) + (y * y));
     }
 
-    Vec2 operator+(Vec2 rhs)
+
+    T operator[](size_t idx)
     {
-        return Vec2{x + rhs.x, y + rhs.y};
+        if (idx > 1)
+        {
+            std::cout << "Vector index out of range, returning last valid index.\n";
+        }
+        return idx == 0 ? x : y;
     }
 
-    Vec2 operator-(Vec2 rhs)
+    Vec2 operator+(const Vec2& rhs) const
     {
-        return Vec2{x - rhs.x, y - rhs.y,};
+        return Vec2(x + rhs.x, y + rhs.y);
     }
 
-    Vec2 operator*(float scalar)
+    Vec2& operator+=(const Vec2& rhs)
     {
-        return Vec2{x * scalar, y * scalar
-        };
+        x += rhs.x;
+        y += rhs.y;
+
+        return *this;
+    }
+    
+    Vec2 operator-(const Vec2& rhs) const
+    {
+        return Vec2(x - rhs.x, y - rhs.y);
     }
 
-    Vec2 operator/(float scalar)
+    Vec2 operator-() const
     {
-        return Vec2(x / scalar, y / scalar);
+        return Vec2(-x, -y);
     }
 
-    bool operator==(const Vec2& rhs)
+    Vec2& operator-=(const Vec2& rhs)
     {
-        return (x == rhs.x && y == rhs.y);
+        x -= rhs.x;
+        y -= rhs.y;
+
+        return *this;
     }
 
-    bool operator!=(const Vec2& rhs)
+    Vec2 operator*(double s)
+    {
+        return Vec2(s * x, s * y);
+    }
+
+    Vec2& operator*=(double s)
+    {
+        x *= s;
+        y *= s;
+
+        return *this;
+    }
+
+    Vec2 operator/(double s)
+    {
+        return Vec2(x/s, y/s);
+    }
+
+    Vec2& operator/=(double s)
+    {
+        x /= s;
+        y /= s;
+
+        return *this;
+    }
+
+    bool operator==(const Vec2& rhs) const
+    {
+        return CinderMath::equals(x, rhs.x) &&
+               CinderMath::equals(y, rhs.y);
+    }
+
+    bool operator!=(const Vec2& rhs) const
     {
         return !operator==(rhs);
     }
 
-    T operator[](int index)
+
+    bool operator>(const Vec2& rhs) const
     {
-        // Returns z for positive index values
-        return index == 0 ? x : index == 1 ? y : throw std::out_of_range("Index out of range");
+        return magnitude() > rhs.magnitude();
     }
 
-    float getMagnitude()
+    bool operator<(const Vec2& rhs) const
     {
-        return std::sqrt(static_cast<float>((x * x + y * y )));
+        return magnitude() < rhs.magnitude();
     }
 
-    // Modifies the current object-
-    const Vec2& normalize()
-    {
-            float magnitude = getMagnitude();
-            x /= magnitude;
-            y /= magnitude;
-        return *this;
-    }
-
-    // Returns normalized variant of the current object
-    Vec2 getNormalized()
-    {
-        float magnitude = (getMagnitude());
-        return Vec2(x/magnitude, y/magnitude);
-    }
-
-
-    static float dot(Vec2 lhs, Vec2 rhs)
+    [[nodiscard]]
+    static T dot(const Vec2& lhs, const Vec2& rhs)
     {
         return ((lhs.x * rhs.x) + (lhs.y * rhs.y));
     }
 
+    Vec2& normalize()
+    {
+        double length = magnitude();
+        if (*this != zero() && length > 0.)
+        {
+            x = T(x/length);
+            y = T(y/length);
+        }
+        return *this;
+    }
+
+    Vec2 getNormalized() const
+    {
+        Vec2 v{*this};
+        double length = v.magnitude();
+        if (v != zero() && length > 0.)
+        {
+            v.normalize();
+        }
+        return v;
+    }
+
     static Vec2 zero()
     {
-        return Vec2(0);
+        return Vec2(static_cast<T>(0));
     }
+
+    static void print(const Vec2& v, std::ostream& stream = std::cout)
+    {
+        stream << "Vector::(" << v.x << ", " << v.y << ")" << std::endl;
+    }
+
 };
 
-// Defining using directives for ease of use
 using Vec2f = Vec2<float>;
 using Vec2i = Vec2<int>;
