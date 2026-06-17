@@ -52,6 +52,7 @@ void PointLight::use(const Shader& shader)
 	shader.setUniformf((uniformStr + "linear").c_str(), m_linear);
 	shader.setUniformf((uniformStr + "quadratic").c_str(), m_quadratic);
 	shader.setUniformf((uniformStr + "intensity").c_str(), m_intensity);
+	shader.setUniformf((uniformStr + "radius").c_str(), m_radius);
 
 	shader.setUniformVec3((uniformStr + "color").c_str(), m_color);
 	shader.setUniformVec3((uniformStr + "position").c_str(), getPosition());

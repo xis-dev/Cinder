@@ -18,6 +18,8 @@ protected:
 	float m_intensity{ 1.0f };
 
 public:
+
+	bool canCastShadow{true};
 	void setLightID(int id) { m_lightID = id; }
 	void setIntensity(float i) { m_intensity = i; }
 	float getIntensity() { return m_intensity; }
@@ -48,7 +50,7 @@ class PointLight : public LightEntity {
 public:
 	PointLight(float attenuationRadius,
 		glm::vec3 color = glm::vec3(1.0f),
-		float intensity = 1.0f) : LightEntity(color, intensity)
+		float intensity = 1.0f, float castShadow = true) : LightEntity(color, intensity)
 	{
 		m_radius = attenuationRadius;
 		glm::vec3 attenuationValueSet = getAttenuationValues(attenuationRadius);
@@ -61,6 +63,14 @@ public:
 	float m_constant{};
 	float m_linear{};
 	float m_quadratic{};
+
+	// Point Map FBO Attachment
+	unsigned shadowMap;
+
+	void initShadowMap()
+	{
+
+	}
 
 	glm::vec3 getAttenuationValues(float radius, float threshold = 0.01f, float ratio = 1.0f, float constant = 1.0f)
 	{

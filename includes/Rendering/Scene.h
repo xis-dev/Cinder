@@ -20,6 +20,12 @@
 class Shader;
 class Camera;
 
+
+struct PointShadow
+{
+	unsigned shadowCubemap{};
+	std::vector<glm::mat4> shadowMapTransforms{};
+};
 class Scene
 {
 
@@ -33,6 +39,7 @@ public:
 	std::vector<std::unique_ptr<Entity>> m_entities{};
 public:
 	std::vector<LightEntity*> m_lights{};
+	std::unordered_map<PointLight*, PointShadow> m_pointShadows;
 	std::vector<MeshEntity*> m_meshEnts{};
 	std::vector<glm::mat4> dirLightTransforms{};
 	//std::unordered_map<Shader*, std::vector<MeshEntity*>> m_renderBatches{};
@@ -57,6 +64,12 @@ public:
 				glm::mat4 view = glm::lookAt(static_cast<glm::vec3>(-dir) * 20.0f, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 				dirLightTransforms.push_back(proj * view);
 			}
+			if constexpr (std::is_same_v<T, PointLight>)
+			{
+				auto pointShadowPair = PointShadow{};
+			pointShadowPair.shadowCubemap = Texture::createEmptyCubemap(2048, 2048, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT);
+				m_pointShadows.insert({rawPtr, pointShadowPair});
+			}
 			m_lights.push_back(dynamic_cast<LightEntity*>(rawPtr));
 			rawPtr->setLightID(T::m_lightCountByType);
 			++T::m_lightCountByType;
@@ -77,11 +90,14 @@ public:
 	}
 
 		
-	
 
 public:
-	
+
+	void init();
 	void applyLightCountsToShader(const Shader& shader) const;
+
+	// TODO: Move to renderer
+	void setupPointMatrices(int w, int h);
 
 
 	const std::vector<std::unique_ptr<Entity>>& getEntities() const

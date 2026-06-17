@@ -35,6 +35,8 @@ void Renderer::init(GLFWwindow *win, AssetManager *manager, Scene *scene, int *w
     shadowTex = Texture::createEmptyTex(3840, 2160, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT);
     shadowFBO = create2DShadowFBO(shadowTex);
 
+
+
     pointShadowTex = Texture::createEmptyCubemap(2048, 2048, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT);
     pointShadowFBO = createCubemapShadowFBO(pointShadowTex);
 
@@ -556,9 +558,15 @@ void Renderer::renderScene(const Camera& cam, unsigned fboToRenderTo, const int 
     glBindTexture(GL_TEXTURE_2D, shadowTex);
     lightPassShader->setUniformi("u_ShadowMap", 5);
 
-    glActiveTexture(GL_TEXTURE6);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, pointShadowTex);
-    lightPassShader->setUniformi("u_PointMap", 6);
+    int pointMapStartIdx = 6;
+    int loopIdx = 0;
+    for (auto &[shadowCubemap, shadowMapTransforms]: CURRENT_SCENE->m_pointShadows | std::views::values)
+    {
+        glActiveTexture(GL_TEXTURE0 + pointMapStartIdx + loopIdx);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, shadowCubemap);
+        lightPassShader->setUniformi(("t_PointMaps[" + std::to_string(loopIdx) + "]").c_str(), pointMapStartIdx + loopIdx);
+        ++loopIdx;
+    }
 
     CURRENT_SCENE->illuminate(*lightPassShader);
     CURRENT_SCENE->applyLightCountsToShader(*lightPassShader);
@@ -695,34 +703,37 @@ void Renderer::renderShadowMap()
     }
 }
 
-void Renderer::renderPointMap()
+void Renderer::renderPointMap(Scene* currentScene)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, pointShadowFBO);
-    glClear(GL_DEPTH_BUFFER_BIT);
     auto* pointMapShader = ASSET_MANAGER->shaders.get("pointMap");
     pointMapShader->use();
-    for (auto* light : CURRENT_SCENE->m_lights)
+    currentScene->setupPointMatrices(2048, 2048);
+    for (std::pair<PointLight*, PointShadow> ps : currentScene->m_pointShadows)
     {
-        if (auto* pointLight = dynamic_cast<PointLight*>(light))
+        auto* light = ps.first;
+        auto& shadow = ps.second;
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadow.shadowCubemap, 0);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        pointMapShader->setUniformVec3("u_LightPos", light->getPosition());
+        pointMapShader->setUniformf("u_FarPlane", light->m_radius);
+
+        for (int i = 0; i < 6; ++i)
         {
-            setupPointMatrices(pointLight, 2048, 2048);
-            pointMapShader->setUniformVec3("u_LightPos", pointLight->getPosition());
-            pointMapShader->setUniformf("u_FarPlane", farPlane);
-            for (int i = 0; i < 6; ++i)
+            pointMapShader->setUniformMat4(("u_ShadowMatrices[" + std::to_string(i) + "]").c_str(), shadow.shadowMapTransforms[i]);
+        }
+
+        for (const auto& entity : CURRENT_SCENE->m_meshEnts)
+        {
+            for (auto& modelSet : entity->getModel()->getMeshes())
             {
-                pointMapShader->setUniformMat4(("u_ShadowMatrices[" + std::to_string(i) + "]").c_str(), shadowTransforms[i]);
+                pointMapShader->setUniformMat4("u_Model", entity->getTransformMatrix());
+                modelSet.mesh.draw();
             }
         }
     }
 
-    for (const auto& entity : CURRENT_SCENE->m_meshEnts)
-    {
-        for (auto& modelSet : entity->getModel()->getMeshes())
-        {
-            pointMapShader->setUniformMat4("u_Model", entity->getTransformMatrix());
-            modelSet.mesh.draw();
-        }
-    }
+
 }
 
  std::vector<glm::vec3> Renderer::getSsaoKernel()
@@ -773,7 +784,7 @@ void Renderer::render(const Camera &cam)
     
   
     glViewport(0, 0, 2048, 2048);
-    renderPointMap();
+    renderPointMap(CURRENT_SCENE);
 
     glCullFace(GL_BACK);
     if (cullBackface)

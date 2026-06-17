@@ -24,10 +24,13 @@ void Entity::setTag(const std::string& tag)
 	strcpy(m_tag, tag.c_str());
 }
 
-const char* Entity::getTag()
+const char * Entity::getTag() const
 {
 	return m_tag;
+
 }
+
+
 
 void Entity::setIcon(Texture& icon)
 {

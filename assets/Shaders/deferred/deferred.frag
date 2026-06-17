@@ -19,6 +19,8 @@ in vec3 v_TangentFragPos;
 #define MAX_MAPS_NORMAL 10
 #define MAX_MAPS_HEIGHT 10
 
+
+
 struct Material {
     vec3 albedo;
     float ambient;

@@ -79,11 +79,12 @@ private:
     unsigned createFBO(unsigned* colorTexts, unsigned depthStencil);
     void createPingPongFBOs();
     unsigned create2DShadowFBO(unsigned depthTex);
-    unsigned createCubemapShadowFBO(unsigned depthCubemap);
+
+    static unsigned createCubemapShadowFBO(unsigned depthCubemap);
     void setupPointMatrices(PointLight* light, const int w, const int h);
     void renderScene(const Camera &cam, unsigned fboToRenderTo, int sceneW, int sceneH);
     void renderShadowMap();
-    void renderPointMap();
+    void renderPointMap(Scene *currentScene);
     std::vector<glm::vec3> getSsaoKernel();
 public:
     void init(GLFWwindow* win, AssetManager* manager, Scene* scene, int* width, int* height);

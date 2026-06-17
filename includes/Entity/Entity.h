@@ -30,9 +30,9 @@ protected:
 
 public:
 
-	glm::vec3 getPosition() { return m_position;}
-	glm::vec3 getRotationAxis() { return m_currentRotationAxis; }
-	float getRotationAngle() { return m_currentRotationAngle; }
+	glm::vec3 getPosition() const { return m_position;}
+	glm::vec3 getRotationAxis() const { return m_currentRotationAxis; }
+	float getRotationAngle() const{ return m_currentRotationAngle; }
 
 	void setPosition(glm::vec3 pos) { m_position = pos; }
 	void setPosition(float p) { m_position = glm::vec3(p); }
@@ -42,7 +42,7 @@ public:
 
 	void setTag(const std::string& tag);
 
-	const char* getTag();
+	const char* getTag() const;
 
 	virtual void setIcon(Texture& icon);
 

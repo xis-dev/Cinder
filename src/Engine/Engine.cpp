@@ -187,7 +187,7 @@ void Engine::init(GLFWwindow*& window)
 	imguiInit();
 
 	renderer->init(m_window, m_assetManager, m_currentScene, &scrWidth, &scrHeight);
-
+	m_currentScene->init();
 
 	// as is obvious, materials must be created after shaders and textures
 	createTextures();
