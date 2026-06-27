@@ -25,6 +25,11 @@ public:
     Handle<Model> loadModel(const std::string& file);
     void processMesh(Model& modelToLoadInto, aiMesh* mesh, const aiScene* scene, const std::string& directory);
     void processNode(Model& modelToLoadInto, aiNode* node, const aiScene* scene, const std::string& directory);
-    std::vector<Handle<Texture>> loadMaterialTextures(aiMaterial* mat, aiTextureType assimp_textureType , Texture::Type textureType, const std::string& directory);
+    std::vector<Handle<Texture>> loadMaterialTextures(aiMaterial *mat, aiTextureType
+                                                      assimp_textureType, Texture::Type
+                                                      textureType, const std::string &directory);
 
+private:
+    std::unordered_map<unsigned, Handle<Material>> loadedMaterials; // Material handles with assimp scene indexes to get already loaded materials
+    std::unordered_map<std::string, Handle<Texture>> loadedTextures; // Texture handles with their full path locations to get already loaded textures
 };

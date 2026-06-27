@@ -2,6 +2,7 @@
 
 #include "FileManager.h"
 #include "AssetManager.h"
+#include "DefaultMacros.h"
 
 #include "assimp/Importer.hpp"
 #include "assimp/scene.h"
@@ -31,6 +32,8 @@ Handle<Model> ModelLoader::loadModel(const std::string &file)
 	std::string modelName = p.string().substr(slash == std::string::npos ? 0 : slash + 1,
 		dot - (slash == std::string::npos ? 0 : slash + 1));
     processNode(tempModel, scene->mRootNode, scene, directory);
+	loadedMaterials.clear();
+	loadedTextures.clear();
 	return (ASSET_MANAGER->models.add(std::move(tempModel), modelName));
 }
 
@@ -93,10 +96,19 @@ void ModelLoader::processMesh(Model& modelToLoadInto, aiMesh *mesh, const aiScen
 		}
 	}
 
-	if (mesh->mMaterialIndex >= 0)
+	// Ensure we're accessing a valid material index
+	if (mesh->mMaterialIndex > 0)
 	{
-		Material tempMat{ASSET_MANAGER->shaders.getHandle("textured_lit")};
+		// Has this material already been loaded?
+		if (loadedMaterials.contains(mesh->mMaterialIndex))
+		{
+			modelToLoadInto.add((ModelSet{ std::move(Mesh(vertices, indices)), loadedMaterials[mesh->mMaterialIndex]}));
+			return;
+		}
+		// Get default material
+		Material tempMat{ASSET_MANAGER->shaders.getHandle(SHADER_DEFAULT_TEXTURED_LIT)};
 		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+
 		std::vector<Handle<Texture>> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, Texture::Diffuse, directory);
 
 		ts.insert(ts.end(), diffuseMaps.begin(), diffuseMaps.end());
@@ -114,8 +126,10 @@ void ModelLoader::processMesh(Model& modelToLoadInto, aiMesh *mesh, const aiScen
 			tempMat.addTexture(tex);
 		}
 		// TODO: Mat name may create problems
-
-		modelToLoadInto.add((ModelSet{ std::move(Mesh(vertices, indices)), ASSET_MANAGER->materials.add(std::move(tempMat), mesh->mName.C_Str()) }));
+		// Using mesh name for now cause materials commonly have similar names, use till add proper resource manager similar name addition
+		Handle<Material> matHandle = ASSET_MANAGER->materials.add(std::move(tempMat), mesh->mName.C_Str());
+		loadedMaterials.insert({mesh->mMaterialIndex, matHandle});
+		modelToLoadInto.add((ModelSet{ std::move(Mesh(vertices, indices)), matHandle}));
 	}
 
 }
@@ -156,11 +170,11 @@ std::vector<Handle<Texture>> ModelLoader::loadMaterialTextures(aiMaterial *mat, 
 
 		auto& allTextures = ASSET_MANAGER->textures.getAllResources();
 		auto allNames = ASSET_MANAGER->textures.getNames();
-		for (auto& r : allNames)
+		for (auto& [loadedTexPath, loadedTexHandle] : loadedTextures)
 		{
-			if (std::strcmp(ASSET_MANAGER->textures.get(r.first)->getLocation().c_str(), texturePath.string().c_str()) == 0)
+			if (std::strcmp(loadedTexPath.c_str(), texturePath.string().c_str()) == 0) // Compare loaded texture path with current texture path
 			{
-				ts.push_back(ASSET_MANAGER->textures.getHandle(r.first));
+				ts.push_back(loadedTexHandle);
 				skip = true;
 				break;
 			}
@@ -172,6 +186,7 @@ std::vector<Handle<Texture>> ModelLoader::loadMaterialTextures(aiMaterial *mat, 
 			std::string textureName = texturePath.string().substr(slash == std::string::npos ? 0 : slash + 1,
 				dot - (slash == std::string::npos ? 0 : slash + 1));
 			Handle<Texture> tex = ASSET_MANAGER->textures.add(Texture(texturePath.string(), textureType), textureName);
+			loadedTextures.insert({texturePath.string(), tex});
 			ts.push_back(tex);
 		}
 	}

@@ -13,7 +13,7 @@
 
 #include "Rendering/Renderer.h"
 
-
+#include "DefaultMacros.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include "FileLoader.h"
@@ -450,7 +450,7 @@ void Engine::createShaders()
 {
 	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/default_lit.frag"), "lit");
 	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/default_unlit.frag"), "unlit");
-	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/deferred/deferred.frag"), "textured_lit");
+	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/deferred/deferred.frag"), SHADER_DEFAULT_TEXTURED_LIT);
 	m_assetManager->shaders.add(Shader("assets/Shaders/world_grid.vert", "assets/Shaders/world_grid.frag"), "grid");
 	m_assetManager->shaders.add(Shader("assets/Shaders/item_icon.vert", "assets/Shaders/item_icon.frag"), "icon");
 	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/singleColor.frag"), "border");
@@ -487,14 +487,14 @@ void Engine::createMaterials()
 {
 	m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle("lit")), "default");
 
-	m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle("textured_lit")), "lit");
+	m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle(SHADER_DEFAULT_TEXTURED_LIT)), "lit");
 
 	m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle("unlit")), "unlit");
 
-	m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle("textured_lit"),
+	m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle(SHADER_DEFAULT_TEXTURED_LIT),
 		m_assetManager->textures.getHandle("aphex")), "aphex");
 
-	Handle<Material> floorMat = m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle("textured_lit"), m_assetManager->textures.getHandle("floor")), "floor");
+	Handle<Material> floorMat = m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle(SHADER_DEFAULT_TEXTURED_LIT), m_assetManager->textures.getHandle("floor")), "floor");
 	m_assetManager->materials.get(floorMat)->setShininess(16.0f);
 	m_assetManager->materials.get(floorMat)->setSpecular(0.15f);
 	m_assetManager->materials.get(floorMat)->addTexture(m_assetManager->textures.getHandle("floor_normal"));
@@ -502,7 +502,7 @@ void Engine::createMaterials()
 
 	Handle<Texture> containerTex = m_assetManager->textures.getHandle("container");
 
-	auto containerHandle = m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle("textured_lit"), containerTex) , "container");
+	auto containerHandle = m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle(SHADER_DEFAULT_TEXTURED_LIT), containerTex) , "container");
 
 	m_assetManager->materials.get(containerHandle)->addTexture(m_assetManager->textures.add(Texture("assets/Textures/container_specular.png", Texture::Type::Specular), "container_specular"));
 

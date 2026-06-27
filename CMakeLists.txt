@@ -94,7 +94,8 @@ set (HEADER_SOURCES
 
     includes/Resources/Model.h
         includes/Utilities/AssetManager.h
- "includes/Resources/Handle.h" "includes/Primitives/Skybox.h" "includes/Primitives/Quad.h")
+ "includes/Resources/Handle.h" "includes/Primitives/Skybox.h" "includes/Primitives/Quad.h"
+        includes/Utilities/DefaultMacros.h)
 
 set(PROJECT_SOURCES
      ${MATH}
