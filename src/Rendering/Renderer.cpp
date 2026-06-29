@@ -32,7 +32,7 @@ void Renderer::init(GLFWwindow *win, AssetManager *manager, Scene *scene, int *w
     createSkybox();
     cubeMapTex = Texture::createCubemap(textures_faces);
 
-    shadowTex = Texture::createEmptyTex(3840, 2160, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT);
+    shadowTex = Texture::createEmptyTex(1920, 1080, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT);
     shadowFBO = create2DShadowFBO(shadowTex);
 
 
@@ -69,6 +69,8 @@ void Renderer::init(GLFWwindow *win, AssetManager *manager, Scene *scene, int *w
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, *currentWindowWidth, *currentWindowHeight);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, deferredDepthStencil);
 
+
+    for (int i = 0; i < 6; ++i) shadowMatNames[i] = "u_ShadowMatrices[" + std::to_string(i) + "]";
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
@@ -345,7 +347,7 @@ void Renderer::setupPointMatrices(PointLight* light, const int w, const int h)
     farPlane = far;
     glm::mat4 shadow_proj = glm::perspective(glm::radians(90.0f), aspect, near, far);
 
-    glm::vec3 lightPos = light->getPosition();
+    glm::vec3 lightPos = light->getWorldPosition();
     shadowTransforms.push_back(shadow_proj *
         glm::lookAt(lightPos, lightPos + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
     shadowTransforms.push_back(shadow_proj *
@@ -376,23 +378,22 @@ void Renderer::renderScene(const Camera& cam, unsigned fboToRenderTo, const int 
     glm::mat4 vpMat = projectionMat * viewMat;
 
 
-    for (const auto& entity : CURRENT_SCENE->m_meshEnts)
+    for (Shader* shader : CURRENT_SCENE->m_renderBatches | std::views::keys)
     {
-        for (auto& modelSet : entity->getModel()->getMeshes())
+        for (const auto& [modelSet, entity]: CURRENT_SCENE->m_renderBatches[shader])
         {
-            Material* mat = ASSET_MANAGER->materials.get(modelSet.mat);
-            Shader* shader = ASSET_MANAGER->shaders.get(mat->getShader());
+            Material* mat = ASSET_MANAGER->materials.get(modelSet->mat);
             shader->use();
 
             shader->setUniformVec3("u_CameraPosition", camPosition);
             shader->setUniformMat4("u_ProjectionMatrix", projectionMat);
-            shader->setUniformMat4("u_ModelMatrix", entity->getTransformMatrix());
+            shader->setUniformMat4("u_ModelMatrix", entity->getGlobalTransformMatrix());
             shader->setUniformMat4("u_ViewMatrix", viewMat);
             shader->setUniformMat4("u_VPMatrix", vpMat);
             shader->setUniformf("u_ParallaxHeightScale", parallaxScale);
 
             shader->setUniformVec3("u_ViewDirection", cam.getDirection());
-            shader->setUniformMat4("u_MVPMatrix", vpMat * entity->getTransformMatrix());
+            shader->setUniformMat4("u_MVPMatrix", vpMat * entity->getGlobalTransformMatrix());
 
 
             const auto textures = mat->getTextures();
@@ -454,7 +455,7 @@ void Renderer::renderScene(const Camera& cam, unsigned fboToRenderTo, const int 
             shader->setUniformf((materialUniformBase + "shininess").c_str(), mat->getShininess());
 
 
-            modelSet.mesh.draw();
+            modelSet->mesh.draw();
 
             for (int i = 0; i <= textureUnit; ++i)
             {
@@ -462,7 +463,6 @@ void Renderer::renderScene(const Camera& cam, unsigned fboToRenderTo, const int 
                 glBindTexture(GL_TEXTURE_2D, 0);
                 glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
             }
-
 
         }
     }
@@ -640,7 +640,7 @@ void Renderer::renderScene(const Camera& cam, unsigned fboToRenderTo, const int 
             {
                 iconShader->use();
 
-                iconShader->setUniformVec3("u_ObjectPosition", (glm::vec3)entity->getPosition());
+                iconShader->setUniformVec3("u_ObjectPosition", (glm::vec3)entity->getWorldPosition());
                 iconShader->setUniformMat4("u_ProjectionMatrix", projection);
                 iconShader->setUniformMat4("u_ViewMatrix", view);
                 iconShader->setUniformf("u_Gamma", gamma);
@@ -678,7 +678,7 @@ void Renderer::renderScene(const Camera& cam, unsigned fboToRenderTo, const int 
 
 void Renderer::renderShadowMap()
 {
-    glViewport(0, 0, 3840, 2160);
+    glViewport(0, 0, 1920, 1080);
     glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
     glClear(GL_DEPTH_BUFFER_BIT);
 
@@ -697,7 +697,7 @@ void Renderer::renderShadowMap()
     {
         for (auto& modelSet : entity->getModel()->getMeshes())
         {
-            shadowMapShader->setUniformMat4("u_Model", entity->getTransformMatrix());
+            shadowMapShader->setUniformMat4("u_Model", entity->getGlobalTransformMatrix());
             modelSet.mesh.draw();
         }
     }
@@ -715,19 +715,19 @@ void Renderer::renderPointMap(Scene* currentScene)
         auto& shadow = ps.second;
         glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadow.shadowCubemap, 0);
         glClear(GL_DEPTH_BUFFER_BIT);
-        pointMapShader->setUniformVec3("u_LightPos", light->getPosition());
+        pointMapShader->setUniformVec3("u_LightPos", light->getWorldPosition());
         pointMapShader->setUniformf("u_FarPlane", light->m_radius);
 
         for (int i = 0; i < 6; ++i)
         {
-            pointMapShader->setUniformMat4(("u_ShadowMatrices[" + std::to_string(i) + "]").c_str(), shadow.shadowMapTransforms[i]);
+            pointMapShader->setUniformMat4(shadowMatNames[i].c_str(), shadow.shadowMapTransforms[i]);
         }
 
         for (const auto& entity : CURRENT_SCENE->m_meshEnts)
         {
             for (auto& modelSet : entity->getModel()->getMeshes())
             {
-                pointMapShader->setUniformMat4("u_Model", entity->getTransformMatrix());
+                pointMapShader->setUniformMat4("u_Model", entity->getGlobalTransformMatrix());
                 modelSet.mesh.draw();
             }
         }

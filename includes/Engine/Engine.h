@@ -103,13 +103,13 @@ private:
 
 	void createObjectIcons();
 
-	void createFloor();
+	Entity* createFloor();
 
 	void addMeshToScene(Model* mesh, glm::vec3 position);
 
 	void createPointLight(const std::string& name, float radius, glm::vec3 position);
 
-	void createDirectionalLight(const std::string& name, glm::vec3 direction);
+	Entity* createDirectionalLight(const std::string& name, glm::vec3 direction);
 
 
 	void createCube(const std::string &name = "Cube", const char *materialName = "default", glm::vec3 position = glm::vec3(0.0f), float

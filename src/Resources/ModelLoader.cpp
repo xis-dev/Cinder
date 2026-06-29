@@ -14,7 +14,7 @@
 Handle<Model> ModelLoader::loadModel(const std::string &file)
 {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(file, aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
+    const aiScene* scene = importer.ReadFile(file, aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_CalcTangentSpace | aiProcess_GlobalScale);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
@@ -37,7 +37,7 @@ Handle<Model> ModelLoader::loadModel(const std::string &file)
 	return (ASSET_MANAGER->models.add(std::move(tempModel), modelName));
 }
 
-void ModelLoader::processMesh(Model& modelToLoadInto, aiMesh *mesh, const aiScene *scene, const std::string &directory)
+void ModelLoader::processMesh(const aiMatrix4x4& transformMat, Model& modelToLoadInto, aiMesh *mesh, const aiScene *scene, const std::string &directory)
 {
     std::vector<Vertex> vertices;
 	std::vector<unsigned> indices;
@@ -51,11 +51,20 @@ void ModelLoader::processMesh(Model& modelToLoadInto, aiMesh *mesh, const aiScen
 		vector.y = mesh->mVertices[i].y;
 		vector.z = mesh->mVertices[i].z;
 
-		vertex.position = glm::vec3(vector.x, vector.y, vector.z);
+		aiVector3D aiVert{vector.x, vector.y, vector.z};
+		aiVert = transformMat * aiVert;
+		vertex.position = glm::vec3(aiVert.x, aiVert.y, aiVert.z);
 
-		vector.x = mesh->mNormals[i].x;
-		vector.y = mesh->mNormals[i].y;
-		vector.z = mesh->mNormals[i].z;
+		if (mesh->mNormals)
+		{
+			vector.x = mesh->mNormals[i].x;
+			vector.y = mesh->mNormals[i].y;
+			vector.z = mesh->mNormals[i].z;
+		}
+		else
+		{
+			vector = {0.0, 0.0, 1.0};
+		}
 
 		vertex.normal = glm::vec3(vector.x, vector.y, vector.z);
 
@@ -95,42 +104,51 @@ void ModelLoader::processMesh(Model& modelToLoadInto, aiMesh *mesh, const aiScen
 			indices.push_back(face.mIndices[j]);
 		}
 	}
-
+	// Default textured shader material
+	Material tempMat{ASSET_MANAGER->shaders.getHandle(SHADER_DEFAULT_TEXTURED_LIT)};
+	// Default 0 index means we use the empty default material
 	// Ensure we're accessing a valid material index
-	if (mesh->mMaterialIndex > 0)
+
+	// Get assimp material
+	aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+	if (!material)
 	{
-		// Has this material already been loaded?
-		if (loadedMaterials.contains(mesh->mMaterialIndex))
-		{
-			modelToLoadInto.add((ModelSet{ std::move(Mesh(vertices, indices)), loadedMaterials[mesh->mMaterialIndex]}));
-			return;
-		}
-		// Get default material
-		Material tempMat{ASSET_MANAGER->shaders.getHandle(SHADER_DEFAULT_TEXTURED_LIT)};
-		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-
-		std::vector<Handle<Texture>> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, Texture::Diffuse, directory);
-
-		ts.insert(ts.end(), diffuseMaps.begin(), diffuseMaps.end());
-
-		std::vector<Handle<Texture>> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, Texture::Specular, directory);
-
-		ts.insert(ts.end(), specularMaps.begin(), specularMaps.end());
-
-		std::vector<Handle<Texture>> normalMps = loadMaterialTextures(material, aiTextureType_NORMALS, Texture::Normal, directory);
-
-		ts.insert(ts.end(), normalMps.begin(), normalMps.end());
-
-		for (auto tex : ts)
-		{
-			tempMat.addTexture(tex);
-		}
-		// TODO: Mat name may create problems
-		// Using mesh name for now cause materials commonly have similar names, use till add proper resource manager similar name addition
-		Handle<Material> matHandle = ASSET_MANAGER->materials.add(std::move(tempMat), mesh->mName.C_Str());
-		loadedMaterials.insert({mesh->mMaterialIndex, matHandle});
-		modelToLoadInto.add((ModelSet{ std::move(Mesh(vertices, indices)), matHandle}));
+		std::cerr << "ASSIMP:: Null material on mesh: " << mesh->mName.C_Str() << std::endl;
+		return;
 	}
+	const char* matName = material->GetName().C_Str();
+
+	// Has this material already been loaded?
+	if (loadedMaterials.contains(mesh->mMaterialIndex))
+	{
+		modelToLoadInto.add((ModelSet{Mesh(vertices, indices), loadedMaterials[mesh->mMaterialIndex]}));
+		return;
+	}
+
+	std::vector<Handle<Texture>> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, Texture::Diffuse, directory);
+
+	ts.insert(ts.end(), diffuseMaps.begin(), diffuseMaps.end());
+
+	std::vector<Handle<Texture>> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, Texture::Specular, directory);
+
+	ts.insert(ts.end(), specularMaps.begin(), specularMaps.end());
+
+	std::vector<Handle<Texture>> normalMaps = loadMaterialTextures(material, aiTextureType_NORMALS, Texture::Normal, directory);
+
+	ts.insert(ts.end(), normalMaps.begin(), normalMaps.end());
+
+	for (auto tex : ts)
+	{
+		tempMat.addTexture(tex);
+	}
+
+	aiColor3D diffuseColor;
+	material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuseColor);
+	tempMat.setColor({diffuseColor.r, diffuseColor.g, diffuseColor.b});
+
+	Handle<Material> matHandle = ASSET_MANAGER->materials.add(std::move(tempMat), matName);
+	loadedMaterials.insert({mesh->mMaterialIndex, matHandle});
+	modelToLoadInto.add((ModelSet{ std::move(Mesh(vertices, indices)), matHandle}));
 
 }
 
@@ -141,7 +159,12 @@ void ModelLoader::processNode(Model& modelToLoadInto, aiNode *node, const aiScen
     for (unsigned i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        (processMesh(modelToLoadInto, mesh, scene, directory));
+    	// aiMatrix4x4 a{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0};
+    	// if (node->mTransformation == a)
+    	// {
+    	// 	std::cout << "No\n";
+    	// }
+        (processMesh(node->mTransformation, modelToLoadInto, mesh, scene, directory));
     }
 
     for (unsigned i = 0; i < node->mNumChildren; i++)
@@ -185,7 +208,7 @@ std::vector<Handle<Texture>> ModelLoader::loadMaterialTextures(aiMaterial *mat, 
 			auto dot = texturePath.string().find_last_of('.');
 			std::string textureName = texturePath.string().substr(slash == std::string::npos ? 0 : slash + 1,
 				dot - (slash == std::string::npos ? 0 : slash + 1));
-			Handle<Texture> tex = ASSET_MANAGER->textures.add(Texture(texturePath.string(), textureType), textureName);
+			Handle<Texture> tex = ASSET_MANAGER->textures.add(Texture(texturePath.string(), textureType, true), textureName);
 			loadedTextures.insert({texturePath.string(), tex});
 			ts.push_back(tex);
 		}

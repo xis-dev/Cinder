@@ -5,7 +5,10 @@
 #include <ext/matrix_float4x4.hpp>
 #include <ext/vector_float3.hpp>
 
+#include <unordered_map>
+#include <initializer_list>
 #include <string>
+
 
 class Shader: public Resource
 {
@@ -20,6 +23,8 @@ private:
 	std::string getShaderSource(const char* fileName);
 
 public:
+	mutable std::unordered_map<std::string, int> uniformLocations;
+
 	/*Shader(const Shader& s) = delete;
 	Shader& operator=(const Shader& s) = delete;
 

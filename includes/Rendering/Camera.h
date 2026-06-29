@@ -12,7 +12,7 @@
 class Camera
 {
 public:
-	Camera(glm::vec3 position,glm::vec3 direction, float maxFov, float aspect, float movementSpeed, float nearPlane = 0.01f, float farPlane = 10000.0f):
+	Camera(glm::vec3 position,glm::vec3 direction, float maxFov, float aspect, float movementSpeed, float nearPlane = 1.f, float farPlane = 5000.0f):
 	m_position(position),  m_direction(glm::normalize(direction)),m_maxFov(maxFov), m_currentFov(maxFov),
 	m_aspectRatio(aspect), m_nearPlane(nearPlane), m_farPlane(farPlane), m_speed(movementSpeed)
 	{
@@ -34,13 +34,11 @@ private:
 
 	float m_maxFov{};
 	float m_currentFov{};
-	float m_speed{};
 	float m_yaw{};
 	float m_pitch{};
 
 	float m_aspectRatio{};
-	float m_nearPlane{};
-	float m_farPlane{};
+
 
 	void setViewMatrix();
 	void setProjectionMatrix();
@@ -55,5 +53,19 @@ public:
 	glm::vec3 getDirection() const;
 	glm::vec3 getRightVector() const;
 	glm::vec3 getUpVector() const;
+
+	float m_nearPlane{};
+	float m_farPlane{};
+	float m_speed{};
+
+	void setFarPlane(float far)
+	{
+		m_farPlane = far;
+	}
+
+	void setNearPlane(float near)
+	{
+		m_nearPlane = near;
+	}
 
 };

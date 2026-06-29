@@ -23,7 +23,8 @@ public:
 
     AssetManager* ASSET_MANAGER;
     Handle<Model> loadModel(const std::string& file);
-    void processMesh(Model& modelToLoadInto, aiMesh* mesh, const aiScene* scene, const std::string& directory);
+    void processMesh(const aiMatrix4x4 &transformMat, Model &modelToLoadInto, aiMesh *mesh, const aiScene *scene, const std::string &
+                     directory);
     void processNode(Model& modelToLoadInto, aiNode* node, const aiScene* scene, const std::string& directory);
     std::vector<Handle<Texture>> loadMaterialTextures(aiMaterial *mat, aiTextureType
                                                       assimp_textureType, Texture::Type

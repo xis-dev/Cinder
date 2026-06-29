@@ -55,7 +55,7 @@ void PointLight::use(const Shader& shader)
 	shader.setUniformf((uniformStr + "radius").c_str(), m_radius);
 
 	shader.setUniformVec3((uniformStr + "color").c_str(), m_color);
-	shader.setUniformVec3((uniformStr + "position").c_str(), getPosition());
+	shader.setUniformVec3((uniformStr + "position").c_str(), getRelativePosition());
 }
 
 
@@ -77,7 +77,7 @@ void SpotLight::use(const Shader& shader)
 	shader.setUniformf((uniformStr + "outerCutoff").c_str(), m_outerCutoff);
 	shader.setUniformVec3((uniformStr + "color").c_str(), m_color);
 	shader.setUniformVec3((uniformStr + "direction").c_str(), glm::normalize(m_direction));
-	shader.setUniformVec3((uniformStr + "position").c_str(), getPosition());
+	shader.setUniformVec3((uniformStr + "position").c_str(), getRelativePosition());
 	shader.setUniformf((uniformStr + "intensity").c_str(), m_intensity);
 
 }

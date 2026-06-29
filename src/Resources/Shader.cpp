@@ -98,34 +98,80 @@ std::string Shader::getShaderSource(const char* fileName)
 
 void Shader::setUniformi(const char* name, int value) const
 {
-	auto uniformLoc = glGetUniformLocation(m_id, name);
-	glUseProgram(m_id);
+	auto uniformSet = uniformLocations.find(name);
+	GLint uniformLoc;
+	if (uniformSet != uniformLocations.end())
+	{
+		uniformLoc = uniformSet->second;
+	}
+	else
+	{
+		uniformLoc = glGetUniformLocation(m_id, name);
+		uniformLocations.insert({name, uniformLoc});
+	}
 	glUniform1i(uniformLoc, value);
 }
 
 void Shader::setUniformf(const char* name, float value) const
 {
-	auto uniformLoc = glGetUniformLocation(m_id, name);
-	glUseProgram(m_id);
+	auto uniformSet = uniformLocations.find(name);
+	GLint uniformLoc;
+	if (uniformSet != uniformLocations.end())
+	{
+		uniformLoc = uniformSet->second;
+	}
+	else
+	{
+		uniformLoc = glGetUniformLocation(m_id, name);
+		uniformLocations.insert({name, uniformLoc});
+	}
 	glUniform1f(uniformLoc, value);
 }
 
 void Shader::setUniformMat4(const char* name, glm::mat4 value) const
 {
-	auto uniformLoc = glGetUniformLocation(m_id, name);
-	glUseProgram(m_id);
+	auto uniformSet = uniformLocations.find(name);
+	GLint uniformLoc;
+	if (uniformSet != uniformLocations.end())
+	{
+		uniformLoc = uniformSet->second;
+	}
+	else
+	{
+		uniformLoc = glGetUniformLocation(m_id, name);
+		uniformLocations.insert({name, uniformLoc});
+	}
 	glUniformMatrix4fv(uniformLoc, 1, GL_FALSE, glm::value_ptr(value));
 }
 
 void Shader::setUniformVec3(const char* name, glm::vec3 value) const
 {
-	auto uniformLoc = glGetUniformLocation(m_id, name);
+	auto uniformSet = uniformLocations.find(name);
+	GLint uniformLoc;
+	if (uniformSet != uniformLocations.end())
+	{
+		uniformLoc = uniformSet->second;
+	}
+	else
+	{
+		uniformLoc = glGetUniformLocation(m_id, name);
+		uniformLocations.insert({name, uniformLoc});
+	}
 	glUniform3fv(uniformLoc, 1, glm::value_ptr(value));
 }
 
 void Shader::setUniformVec3Array(const char* name, const glm::vec3* data, int count) const {
-	auto loc = glGetUniformLocation(m_id, name);
-	glUniform3fv(loc, count, glm::value_ptr(data[0]));
+	auto uniformSet = uniformLocations.find(name);
+	GLint uniformLoc;
+	if (uniformSet != uniformLocations.end())
+	{
+		uniformLoc = uniformSet->second;
+	}
+	else
+	{
+		uniformLocations.insert({name, uniformLoc});
+	}
+	glUniform3fv(uniformLoc, count, glm::value_ptr(data[0]));
 }
 
 void Shader::use() const

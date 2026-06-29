@@ -2,8 +2,10 @@
 
 
 #include "Math/Vec3.h"
+#include "Delegate.h"
 #include "glm/ext/matrix_transform.hpp"
 #include <string>
+#include <vector>
 
 class Scene;
 
@@ -18,6 +20,9 @@ class Entity
 public:
 	virtual ~Entity() = default;
 
+private:
+	Entity*m_parent = nullptr;
+	std::vector<Entity*> m_children;
 
 protected:
 	char m_tag[MAX_NAME_LENGTH]{};
@@ -28,11 +33,17 @@ protected:
 	Texture* m_icon{};
 	bool m_hasIcon{};
 
+	// Returns success state boolean
+	void findAndRemoveChild(Entity* child);
 public:
 
-	glm::vec3 getPosition() const { return m_position;}
-	glm::vec3 getRotationAxis() const { return m_currentRotationAxis; }
-	float getRotationAngle() const{ return m_currentRotationAngle; }
+	void setParent(Entity* child);
+
+	std::vector<Entity*> getChildren() const;
+	glm::vec3 getRelativePosition() const { return m_position;}
+	glm::vec3 getWorldPosition() const;
+	glm::vec3 getRelativeRotationAxis() const { return m_currentRotationAxis; }
+	float getRelativeRotationAngle() const{ return m_currentRotationAngle; }
 
 	void setPosition(glm::vec3 pos) { m_position = pos; }
 	void setPosition(float p) { m_position = glm::vec3(p); }
@@ -54,7 +65,10 @@ public:
 
 	virtual void imguiDraw();
 
-	virtual glm::mat4 getTransformMatrix();
+	virtual glm::mat4 getRelativeTransformMatrix();
+
+	// Transform matrix globally after parent transformation
+	virtual glm::mat4 getGlobalTransformMatrix();
 };
 
 

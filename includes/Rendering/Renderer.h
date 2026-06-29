@@ -23,7 +23,6 @@ public:
     GLFWwindow* WINDOW;
     AssetManager* ASSET_MANAGER;
     Scene* CURRENT_SCENE;
-
     std::vector<std::string> textures_faces{
     "assets/Textures/skybox/right.jpg",
     "assets/Textures/skybox/left.jpg",
@@ -32,6 +31,7 @@ public:
     "assets/Textures/skybox/front.jpg",
     "assets/Textures/skybox/back.jpg"
     };
+    std::string shadowMatNames[6];
     unsigned cubeMapTex;
     unsigned addonVAO{};
 

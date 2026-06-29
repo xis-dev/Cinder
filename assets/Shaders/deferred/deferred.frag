@@ -77,7 +77,7 @@ void main() {
     }
 
     diffuseColor /= max(numberOfDiffuseMaps, 1);
-    //diffuseColor *= u_Material.albedo;
+    diffuseColor *= u_Material.albedo;
 
     vec3 specularColor = numberOfSpecularMaps > 0 ? vec3(0.0) : vec3(0.0);
     for (int i = 0; i < numberOfSpecularMaps; i++) {

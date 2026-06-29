@@ -65,7 +65,15 @@ public:
 	static std::string getCanonicalPath(const std::string& relativePath)
 	{
 		std::string absolute = getPath(relativePath);
-		auto absolutePath = std::filesystem::canonical(absolute);
+		std::filesystem::path absolutePath;
+		try
+		{
+		absolutePath = std::filesystem::canonical(absolute);
+		}
+		catch (std::exception e)
+		{
+			std::cerr << "Exception: " << e.what() << std::endl;
+		}
 
 		if (std::filesystem::exists(absolutePath))
 		{

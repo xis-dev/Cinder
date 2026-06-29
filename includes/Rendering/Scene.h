@@ -7,6 +7,8 @@
 #include <type_traits>
 #include <unordered_map>
 #include <Utilities/IconRegistry.h>
+
+#include "AssetManager.h"
 #include "Entity/Entity.h"
 #include "Entity/LightEntity.h"
 #include "Entity/MeshEntity.h"
@@ -20,7 +22,11 @@
 class Shader;
 class Camera;
 
-
+struct RenderBatch
+{
+	Shader* shader;
+	ModelSet* modelSet;
+};
 struct PointShadow
 {
 	unsigned shadowCubemap{};
@@ -31,15 +37,16 @@ class Scene
 
 public:
 	Scene() = default;
-
 private:
 
 	size_t m_totalEntities{};
+	AssetManager* ASSET_MANAGER;
 public:
 	std::vector<std::unique_ptr<Entity>> m_entities{};
 public:
 	std::vector<LightEntity*> m_lights{};
 	std::unordered_map<PointLight*, PointShadow> m_pointShadows;
+	std::unordered_map<Shader*, std::unordered_map<const ModelSet*, Entity*>> m_renderBatches{};
 	std::vector<MeshEntity*> m_meshEnts{};
 	std::vector<glm::mat4> dirLightTransforms{};
 	//std::unordered_map<Shader*, std::vector<MeshEntity*>> m_renderBatches{};
@@ -78,6 +85,12 @@ public:
 		if constexpr (std::is_base_of_v<MeshEntity, T>)
 		{
 			m_meshEnts.push_back(rawPtr);
+			MeshEntity* meshEnt = dynamic_cast<MeshEntity*>(rawPtr);
+			for (const ModelSet& modelSet: meshEnt->getModel()->getMeshes())
+			{
+				Shader* shader = ASSET_MANAGER->shaders.get(ASSET_MANAGER->materials.get(modelSet.mat)->getShader());
+				m_renderBatches[shader].insert({&modelSet, rawPtr});
+			}
 		}
 
 
@@ -93,12 +106,11 @@ public:
 
 public:
 
-	void init();
+	void init(AssetManager* assetManager);
 	void applyLightCountsToShader(const Shader& shader) const;
 
 	// TODO: Move to renderer
 	void setupPointMatrices(int w, int h);
-
 
 	const std::vector<std::unique_ptr<Entity>>& getEntities() const
 	{

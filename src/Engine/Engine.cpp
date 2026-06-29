@@ -163,6 +163,7 @@ void Engine::init(GLFWwindow*& window)
 	}
 	m_modelLoader = new ModelLoader(m_assetManager);
 
+	// Disable vsync
 	glfwSwapInterval(0);
 	// set callbacks, input mode and enable depth
 	glEnable(GL_DEPTH_TEST);
@@ -187,7 +188,7 @@ void Engine::init(GLFWwindow*& window)
 	imguiInit();
 
 	renderer->init(m_window, m_assetManager, m_currentScene, &scrWidth, &scrHeight);
-	m_currentScene->init();
+	m_currentScene->init(m_assetManager);
 
 	// as is obvious, materials must be created after shaders and textures
 	createTextures();
@@ -198,12 +199,14 @@ void Engine::init(GLFWwindow*& window)
 	createObjectIcons();
 
 
-	auto robot = loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/matikantenhauser/scene.gltf");
+	auto robot = loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/sponza_palace/scene.gltf");
 	auto robotEnt = m_currentScene->createEntity<MeshEntity>("Robot", m_assetManager->models.get(robot));
 	//robotEnt->setRotation(glm::vec3(1.0f, 0.0f, 0.0f), -90.0f);
-	robotEnt->setScale(15.0f);
+	robotEnt->setScale(1.0f);
 
-	createFloor();
+	auto floorEnt = createFloor();
+
+	floorEnt->setParent(robotEnt);
 
 	//loadModel("c:/users/pc/desktop/c++/glscene/models/Chest_LowPoly.obj", "Chest", "default", glm::vec3(0.0f, 10.0f, 0.0f), glm::vec3(5.0f));
 
@@ -216,9 +219,13 @@ void Engine::init(GLFWwindow*& window)
 	// 		glm::vec3(2.0f));
 	// }
 
-	createDirectionalLight("DirectionalLight", glm::vec3(3.0f, -10.0f, 3.0f));
+	auto dirEnt = createDirectionalLight("DirectionalLight", glm::vec3(3.0f, -10.0f, 3.0f));
 
+	dirEnt->setParent(floorEnt);
 
+	auto dirEnt2 = createDirectionalLight("DirectionalLight", glm::vec3(3.0f, -10.0f, 3.0f));
+
+	dirEnt2->setParent(robotEnt);
 	for (int i = 0; i < 1;++i) {
 	createPointLight("PointLight" + std::to_string(i), 500.0f ,glm::vec3(pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z));
 
@@ -391,6 +398,9 @@ void Engine::imguiUpdate()
 
 	}
 
+	ImGui::DragFloat("Camera Speed", &camera.m_speed, 1.0f);
+	ImGui::DragFloat("Camera Far Plane", &camera.m_farPlane, 0.1f);
+	ImGui::DragFloat("Camera Near Plane", &camera.m_nearPlane, 0.01f);
 	ImGui::DragFloat("SSAO Strength", &renderer->ssaoStr, 0.1f);
 	ImGui::DragFloat("Gamma Correction exp", &renderer->gamma, 0.1f);
 	ImGui::DragFloat("Parallax Map Height", &renderer->parallaxScale, 0.1f);
@@ -522,10 +532,11 @@ void Engine::createObjectIcons()
 
 
 
-void Engine::createFloor()
+Entity* Engine::createFloor()
 {
 	auto* floor = m_currentScene->createEntity<MeshEntity>("Floor", m_assetManager->models.get("floor"));
 	floor->setScale(35.0f);
+	return (floor);
 	//for (auto& modelSet : floor->getModel()->getMeshes())
 	//{
 	//	auto* mater = m_assetManager->materials.get(modelSet.mat);
@@ -548,11 +559,12 @@ void Engine::createPointLight(const std::string& name, float radius, glm::vec3 p
 	light->setPosition(position);
 }
 
-void Engine::createDirectionalLight(const std::string& name, glm::vec3 direction)
+Entity* Engine::createDirectionalLight(const std::string& name, glm::vec3 direction)
 {
 	auto* light = m_currentScene->createEntity<DirectionalLight>(name, direction);
 	light->setPosition(3.0f);
-	light->setIntensity(0.1f);
+	light->setIntensity(1.f);
+	return light;
 }
 
 void Engine::createCube(const std::string& name, const char* materialName, glm::vec3 position, float rotationAngle, glm::vec3 rotationAxis,

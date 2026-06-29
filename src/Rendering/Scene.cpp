@@ -6,9 +6,9 @@
 #include <glm/ext/matrix_clip_space.hpp>
 
 
-void Scene::init()
+void Scene::init(AssetManager* asset_manager)
 {
-
+	ASSET_MANAGER = asset_manager;
 }
 
 void Scene::applyLightCountsToShader(const Shader& shader) const
@@ -30,7 +30,7 @@ void Scene::setupPointMatrices(int w, const int h)
 		float near = 1.0f;
 		glm::mat4 shadow_proj = glm::perspective(glm::radians(90.0f), aspect, near, light->m_radius);
 
-		glm::vec3 lightPos = light->getPosition();
+		glm::vec3 lightPos = light->getRelativePosition();
 		shadowMapTransforms.push_back(shadow_proj *
 			glm::lookAt(lightPos, lightPos + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
 		shadowMapTransforms.push_back(shadow_proj *

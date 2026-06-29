@@ -35,5 +35,5 @@ public:
 
 	Model* getModel() { return m_model; }
 	virtual void imguiDraw() override;
-	virtual glm::mat4 getTransformMatrix() override;
+	virtual glm::mat4 getRelativeTransformMatrix() override;
 };
