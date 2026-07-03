@@ -40,7 +40,11 @@
 #include <map>
 #include <memory>
 
+#include "ImGuiHolder.h"
+#include "UI/ImGuiPanel.h"
 
+
+class SceneHierarchyPanel;
 class Shader;
 class Renderer;
 class Scene;
@@ -49,8 +53,15 @@ class FileLoader;
 class Engine
 {
 public:
+	Engine()
+	{
+		g_instance = this;
+	}
 
 private:
+
+	static Engine* g_instance;
+
 	// Window and mouse settings
 	static GLFWwindow* m_window;
 	static int scrWidth;
@@ -70,14 +81,14 @@ private:
 	double m_lastFrameTime{};
 	double m_deltaTime{};
 
-	Scene* m_currentScene = new Scene();
+	std::unique_ptr<Scene> m_currentScene{std::make_unique<Scene>()};
+	std::unique_ptr<Renderer> renderer{std::make_unique<Renderer>()};
+	std::unique_ptr<AssetManager> m_assetManager{std::make_unique<AssetManager>()};
+	std::unique_ptr<ModelLoader> m_modelLoader{std::make_unique<ModelLoader>(m_assetManager.get())};
+	std::unique_ptr<ImGuiHolder> m_imguiHolder{std::make_unique<ImGuiHolder>()};
 
-	Renderer* renderer = new Renderer();
-
-	AssetManager*  m_assetManager = new AssetManager();
 
 	static std::unique_ptr<FileLoader> m_FileLoader;
-	ModelLoader* m_modelLoader;
 
 	std::map<float, MeshEntity*> transparentObj{};
 	Camera camera = Camera( glm::vec3(0.0f, 10.0f, -30.0f),glm::vec3(0.0f, 0.0f, 1.0f), 45.0f, static_cast<float>(scrWidth) /(scrHeight), 15.0f);
@@ -91,6 +102,8 @@ private:
 
 	  void imguiInit();
 	 void imguiUpdate();
+	void imguiRenderScene();
+	void imguiMenuBar();
 
 	 void imguiRender();
 
@@ -118,9 +131,6 @@ private:
 
 
 
-
-
-
 	static void keyCallback(GLFWwindow* window, int key, int action, int scancode, int mods);
 	static void frameBufferSizeCallback(GLFWwindow* window, int width, int height);
 	static void mouseCallback(GLFWwindow* window, double xPos, double yPos);
@@ -128,6 +138,15 @@ private:
 	static void fileDropCallback(GLFWwindow* window, int count, const char** paths);
 public:
 	 void run(const int w, const int h, const std::string& title);
+
+	static Engine* get() {return g_instance;}
+
+	float getDeltaTime() {return m_deltaTime;}
+
+	// Events
+
+	static Delegate<GLFWwindow*, int, int> OnWindowResized;
+	static Delegate<GLFWwindow*> OnWindowClosed;
 
 	 ~Engine();
 

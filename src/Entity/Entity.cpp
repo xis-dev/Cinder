@@ -6,12 +6,10 @@
 
 void Entity::findAndRemoveChild(Entity *child)
 {
-	for (size_t i = 0; i < m_children.size(); ++i)
+	if (auto childIterator = std::find_if(m_children.begin(), m_children.end(), [child](const Entity* entPtr){return entPtr == child;});
+			 childIterator != m_children.end())
 	{
-		if (m_children[i] == child)
-		{
-		m_children.erase(m_children.begin() + i);
-		}
+		m_children.erase(childIterator);
 	}
 }
 
@@ -23,6 +21,44 @@ void Entity::setParent(Entity* parent)
 	}
 	m_parent = parent;
 	parent->m_children.push_back(this);
+}
+
+Entity * Entity::getParent() const
+{
+	return m_parent;
+}
+
+void Entity::addChild(Entity *child)
+{
+	child->setParent(this);
+}
+
+void Entity::removeParent()
+{
+	if (m_parent)
+	{
+		m_parent->findAndRemoveChild(this);
+		m_parent = nullptr;
+	}
+}
+
+void Entity::reparentAllChildren(Entity *newParent)
+{
+	auto childrenCopy = m_children;
+	for (auto* childEnt: childrenCopy)
+	{
+		if (childEnt)
+		{
+			childEnt->setParent(newParent);
+		}
+	}
+	m_children.clear();
+}
+
+
+bool Entity::isPendingDestruction()
+{
+	return m_pendingDestruction;
 }
 
 std::vector<Entity *> Entity::getChildren() const
@@ -127,5 +163,10 @@ glm::mat4 Entity::getGlobalTransformMatrix()
 		current = current->m_parent;
 	}
 	return transform;
+}
+
+void Entity::OnDestroyed()
+{
+	// TODO: Keep scale, position and rotation of children after destruction
 }
 

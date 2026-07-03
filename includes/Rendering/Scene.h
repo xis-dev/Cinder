@@ -41,15 +41,20 @@ private:
 
 	size_t m_totalEntities{};
 	AssetManager* ASSET_MANAGER;
+
 public:
+	Entity* RootEntity{nullptr};
 	std::vector<std::unique_ptr<Entity>> m_entities{};
+	// TODO: Add pending destruction state for entities with handles
+	std::vector<Entity*> m_entitiesPendingDestruction;
+	// TODO: Replace when doing proper batching with instancing and materials
+	std::unordered_map<Entity*, std::unordered_map<Shader*,std::vector<const ModelSet*>>> m_modelSetsToRemove;
 public:
 	std::vector<LightEntity*> m_lights{};
 	std::unordered_map<PointLight*, PointShadow> m_pointShadows;
 	std::unordered_map<Shader*, std::unordered_map<const ModelSet*, Entity*>> m_renderBatches{};
 	std::vector<MeshEntity*> m_meshEnts{};
 	std::vector<glm::mat4> dirLightTransforms{};
-	//std::unordered_map<Shader*, std::vector<MeshEntity*>> m_renderBatches{};
 
 public:
 	template<typename T, typename... TArgs>
@@ -60,6 +65,7 @@ public:
 		T* rawPtr = entity.get();
 		rawPtr->setTag(name);
 		m_entities.push_back(std::move(entity));
+		RootEntity->addChild(rawPtr);
 
 		if constexpr (std::is_base_of_v<LightEntity, T>)
 		{
@@ -78,6 +84,7 @@ public:
 				m_pointShadows.insert({rawPtr, pointShadowPair});
 			}
 			m_lights.push_back(dynamic_cast<LightEntity*>(rawPtr));
+			// Set light index to be used to index shader array
 			rawPtr->setLightID(T::m_lightCountByType);
 			++T::m_lightCountByType;
 		}
@@ -85,7 +92,7 @@ public:
 		if constexpr (std::is_base_of_v<MeshEntity, T>)
 		{
 			m_meshEnts.push_back(rawPtr);
-			MeshEntity* meshEnt = dynamic_cast<MeshEntity*>(rawPtr);
+			auto* meshEnt = dynamic_cast<MeshEntity*>(rawPtr);
 			for (const ModelSet& modelSet: meshEnt->getModel()->getMeshes())
 			{
 				Shader* shader = ASSET_MANAGER->shaders.get(ASSET_MANAGER->materials.get(modelSet.mat)->getShader());
@@ -102,12 +109,16 @@ public:
 		return rawPtr;
 	}
 
-		
+
 
 public:
 
+	Delegate<Entity*> OnEntityDestroyed;
+	Entity* getRoot() const;
 	void init(AssetManager* assetManager);
 	void applyLightCountsToShader(const Shader& shader) const;
+
+	void imguiRender();
 
 	// TODO: Move to renderer
 	void setupPointMatrices(int w, int h);
@@ -126,6 +137,9 @@ public:
 
 	void render(const Camera& cam) const;
 
+	void destroyEntity(Entity* entity);
+
+	void end();
 
 };
 

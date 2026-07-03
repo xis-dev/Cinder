@@ -48,8 +48,9 @@ public:
     unsigned shadowFBO, shadowTex;
     unsigned pointShadowFBO, pointShadowTex;
 
-    int* currentWindowWidth;
-    int* currentWindowHeight;
+
+    int renderWidth{};
+    int renderHeight{};
 
     float farPlane{};
 
@@ -71,12 +72,18 @@ public:
     float hdrExposure{ 1.0f };
     bool bloom{true};
 private:
-    void initGBuffer(unsigned& framebuffer, unsigned& position, unsigned& colorSpec, unsigned& normal, const int w, const int h);
-    void initSSAO(unsigned& fb, unsigned& c, unsigned& d_st);
+    void setupGBuffer(unsigned &framebuffer, unsigned &position, unsigned &colorSpec, unsigned &normal, unsigned &material, unsigned &
+                      depthStencil, int w, int h);
+    // Update g-buffer, does not set texture parameters again
+    void updateGBuffer(unsigned &framebuffer, unsigned &position, unsigned &colorSpec, unsigned &normal, unsigned &material, unsigned &
+                  depthStencil, int w, int h);
+    void setupSSAO(unsigned& fb, unsigned& c, unsigned& fb_blur, unsigned& c_blur, int w, int h);
+    void updateSSAO(unsigned& fb, unsigned& c, unsigned& fb_blur, unsigned& c_blur, int w, int h);
+    void setupSSAONoise();
     void drawAddon(int indexCount);
     void createSkybox();
     void drawSkybox(const Camera& cam);
-    unsigned createFBO(unsigned* colorTexts, unsigned depthStencil);
+    unsigned createFBO(unsigned *colorTexts, int colorTexCount, unsigned depthStencil = 0);
     void createPingPongFBOs();
     unsigned create2DShadowFBO(unsigned depthTex);
 
@@ -86,9 +93,22 @@ private:
     void renderShadowMap();
     void renderPointMap(Scene *currentScene);
     std::vector<glm::vec3> getSsaoKernel();
+
+
+
+    void updateRenderComponents(int w, int h);
 public:
-    void init(GLFWwindow* win, AssetManager* manager, Scene* scene, int* width, int* height);
+    void init(GLFWwindow *win, AssetManager *manager, Scene *scene, int width, int height);
+
     void render(const Camera& cam);
+
+    unsigned getFinalSceneTexture();
+
+    void changeViewportSize(int w, int h);
+
+
     void destroy();
+
+
 
 };

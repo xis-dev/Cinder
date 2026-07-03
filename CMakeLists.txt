@@ -25,7 +25,7 @@ FetchContent_MakeAvailable(glfw)
 FetchContent_Declare(
         imgui
         GIT_REPOSITORY https://github.com/ocornut/imgui.git
-        GIT_TAG v1.89.9
+        GIT_TAG docking
 )
 FetchContent_MakeAvailable(imgui)
 
@@ -55,7 +55,9 @@ set(ALL_DEPENDENCIES_DIRS
     ${STB_DIR}
     ${glfw_SOURCE_DIR}
     ${imgui_SOURCE_DIR}
-    ${assimp_SOURCE_DIR})
+    ${imgui_SOURCE_DIR}/backends
+    ${assimp_SOURCE_DIR}
+)
 
 set(PROJECT_INCLUDE_DIR 
     ${PROJECT_SOURCE_DIR}/includes
@@ -137,11 +139,15 @@ set(PROJECT_SOURCES
         src/Rendering/Renderer.cpp
         src/Resources/ModelLoader.cpp
         src/Utilities/FileLoader.cpp
-        src/Utilities/Delegate.cpp)
+        includes/Rendering/ImGuiHolder.cpp
+        includes/Rendering/ImGuiHolder.h
+        src/UI/ImGuiPanel.cpp
+        includes/UI/ImGuiPanel.h)
 
 set(IMGUI_SOURCES
         ${imgui_SOURCE_DIR}/imgui.cpp
         ${imgui_SOURCE_DIR}/imgui_draw.cpp
+        ${imgui_SOURCE_DIR}/imgui_demo.cpp
         ${imgui_SOURCE_DIR}/imgui_tables.cpp
         ${imgui_SOURCE_DIR}/imgui_widgets.cpp
         ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
@@ -157,8 +163,6 @@ target_include_directories(Cinder PRIVATE
         ${INCLUDE_DIRS}
         ${ALL_DEPENDENCIES_DIRS}
 
-        ${imgui_SOURCE_DIR}
-        ${imgui_SOURCE_DIR}/backends
 )
 
 target_compile_definitions(Cinder PRIVATE

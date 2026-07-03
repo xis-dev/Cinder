@@ -169,12 +169,12 @@ unsigned Texture::createCubemap(const std::vector<std::string>& cubeFaces)
 	return id;
 }
 
-unsigned Texture::createEmptyTex(const int w, const int h, GLenum component, GLenum desiredFormat, GLenum type)
+unsigned Texture::createEmptyTex(const int w, const int h, GLenum internalFormat, GLenum desiredFormat, GLenum type)
 {
 	unsigned id;
 	glGenTextures(1, &id);
 	glBindTexture(GL_TEXTURE_2D, id);
-	glTexImage2D(GL_TEXTURE_2D, 0, (GLint)component, w, h, 0, desiredFormat, type, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, (GLint)internalFormat, w, h, 0, desiredFormat, type, NULL);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -186,6 +186,19 @@ unsigned Texture::createEmptyTex(const int w, const int h, GLenum component, GLe
 	//glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
 
+
+	return id;
+}
+
+unsigned Texture::createEmptyRenderbuffer(const int w, const int h, GLenum format,
+	GLenum type)
+{
+	unsigned id;
+	glGenRenderbuffers(1, &id);
+	glBindRenderbuffer(GL_RENDERBUFFER, id);
+	glRenderbufferStorage(GL_RENDERBUFFER, format, w, h);
+
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 	return id;
 }

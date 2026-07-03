@@ -18,6 +18,12 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include "FileLoader.h"
 #include "glm/gtx/norm.hpp"
+
+Engine* Engine::g_instance {nullptr};
+
+Delegate<GLFWwindow*, int, int> Engine::OnWindowResized{};
+Delegate<GLFWwindow*> Engine::OnWindowClosed{};
+
 GLFWwindow* Engine::m_window{};
 
 std::unique_ptr<FileLoader> Engine::m_FileLoader{};
@@ -108,11 +114,13 @@ void Engine::run(const int w, const int h, const std::string& title)
 
 		deltaTimeUpdate();
 
-		imguiUpdate();
+		m_imguiHolder->startRender();
+
 		sInput();
 		sRendering();
 
-		imguiRender();
+		m_imguiHolder->endRender();
+		m_currentScene->end();
 
 		glfwSwapBuffers(m_window);
 	}
@@ -126,10 +134,6 @@ void Engine::run(const int w, const int h, const std::string& title)
 
 Engine::~Engine()
 {
-	delete renderer;
-	delete m_assetManager;
-	delete m_currentScene;
-	delete m_modelLoader;
 }
 
 
@@ -161,7 +165,10 @@ void Engine::init(GLFWwindow*& window)
 	{
 		std::cout << "FAILED TO INITIALIZE GLAD. \n";
 	}
-	m_modelLoader = new ModelLoader(m_assetManager);
+
+	m_currentScene->init(m_assetManager.get());
+	// Init renderer with 1,1 size, will take upon the size of render panel in user interface
+	renderer->init(m_window, m_assetManager.get(), m_currentScene.get(), 1, 1);
 
 	// Disable vsync
 	glfwSwapInterval(0);
@@ -182,13 +189,15 @@ void Engine::init(GLFWwindow*& window)
 	glfwSetDropCallback		      (window, Engine::fileDropCallback);
 	glfwSetInputMode              (window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
+	m_imguiHolder->initialize(m_window, m_currentScene.get(), renderer.get());
+
 
 	Cube::computeTangents();
 	Plane::computeTangents();
-	imguiInit();
+//	imguiInit();
 
-	renderer->init(m_window, m_assetManager, m_currentScene, &scrWidth, &scrHeight);
-	m_currentScene->init(m_assetManager);
+
+
 
 	// as is obvious, materials must be created after shaders and textures
 	createTextures();
@@ -199,16 +208,14 @@ void Engine::init(GLFWwindow*& window)
 	createObjectIcons();
 
 
-	auto robot = loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/sponza_palace/scene.gltf");
-	auto robotEnt = m_currentScene->createEntity<MeshEntity>("Robot", m_assetManager->models.get(robot));
+	auto sponza = loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/sponza_palace/scene.gltf");
+	auto sponzaEnt = m_currentScene->createEntity<MeshEntity>("Robot", m_assetManager->models.get(sponza));
 	//robotEnt->setRotation(glm::vec3(1.0f, 0.0f, 0.0f), -90.0f);
-	robotEnt->setScale(1.0f);
+	sponzaEnt->setScale(1.0f);
 
 	auto floorEnt = createFloor();
 
-	floorEnt->setParent(robotEnt);
-
-	//loadModel("c:/users/pc/desktop/c++/glscene/models/Chest_LowPoly.obj", "Chest", "default", glm::vec3(0.0f, 10.0f, 0.0f), glm::vec3(5.0f));
+	floorEnt->setParent(sponzaEnt);
 
 	//
 	// for (int i = 1; i < 10; ++i)
@@ -225,7 +232,7 @@ void Engine::init(GLFWwindow*& window)
 
 	auto dirEnt2 = createDirectionalLight("DirectionalLight", glm::vec3(3.0f, -10.0f, 3.0f));
 
-	dirEnt2->setParent(robotEnt);
+	dirEnt2->setParent(sponzaEnt);
 	for (int i = 0; i < 1;++i) {
 	createPointLight("PointLight" + std::to_string(i), 500.0f ,glm::vec3(pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z));
 
@@ -276,6 +283,8 @@ void Engine::imguiInit()
 	// Setup Platform/Renderer backends
 	ImGui_ImplGlfw_InitForOpenGL(m_window, true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
 	ImGui_ImplOpenGL3_Init();
+
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 }
 
 void Engine::imguiUpdate()
@@ -284,6 +293,10 @@ void Engine::imguiUpdate()
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+
+	ImGui::DockSpaceOverViewport();
+
+	imguiMenuBar();
 
 	// initialize and assign entity names for imgui dropdown
 	std::vector<const char*> entityNames{};
@@ -311,9 +324,16 @@ void Engine::imguiUpdate()
 		meshNamesPtr.push_back(s.first.c_str());
 	}
 
-	
 
-	ImGui::Begin("Linking ts broke my ass");
+	// // Scene Hierarchy tab
+	// sceneHierarchy.render();
+	//
+	// // Render panel
+	// renderPanel.render();
+	//
+	// // Render properties panel at the end, after the last entity/object to be clicked has been clicked
+	// propertiesPanel.render();
+	ImGui::Begin("Scene");
 
 	if (ImGui::BeginTabBar("Content"))
 	{
@@ -422,6 +442,36 @@ void Engine::imguiUpdate()
 	// Entity Tab
 
 	ImGui::End();
+
+}
+
+void Engine::imguiRenderScene()
+{
+	ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar;
+		(ImGui::Begin("RenderView", nullptr, flags));
+		ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+		viewportSize.x = std::max(viewportSize.x, 400.0f);
+		viewportSize.y = viewportSize.x * (9./16.);
+		ImGui::Image((ImTextureID)(intptr_t)renderer->getFinalSceneTexture(), ImVec2(viewportSize.x, viewportSize.y), ImVec2(0, 1), ImVec2(1, 0));
+		ImGui::End();
+}
+
+void Engine::imguiMenuBar()
+{
+	if (ImGui::BeginMainMenuBar())
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("New")){}
+			if (ImGui::BeginMenu("Open", "Ctrl+O"))
+			{
+				ImGui::MenuItem("testfile.cpp");
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenu();
+		}
+		ImGui::EndMainMenuBar();
+	}
 }
 
 
@@ -582,7 +632,6 @@ void Engine::createCube(const std::string& name, const char* materialName, glm::
 
 void Engine::keyCallback(GLFWwindow* window, int key, int action, int scancode, int mods)
 {
-
 	if (glfwGetKey(m_window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
 	{
 		shiftLock = !shiftLock;
@@ -601,6 +650,8 @@ void Engine::frameBufferSizeCallback(GLFWwindow* window, int width, int height)
 
 	scrWidth = width;
 	scrHeight = height;
+
+	OnWindowResized.broadcast(window, width, height);
 }
 
 void Engine::mouseCallback(GLFWwindow* window, double xPos, double yPos)

@@ -19,6 +19,12 @@ void DirectionalLight::use(const Shader& shader)
 	shader.setUniformf((uniformStr + "intensity").c_str(), m_intensity);
 }
 
+void DirectionalLight::OnDestroyed()
+{
+	LightEntity::OnDestroyed();
+	--m_lightCountByType;
+}
+
 int DirectionalLight::m_lightCountByType{};
 int SpotLight::m_lightCountByType{};
 int PointLight::m_lightCountByType{};
@@ -55,7 +61,13 @@ void PointLight::use(const Shader& shader)
 	shader.setUniformf((uniformStr + "radius").c_str(), m_radius);
 
 	shader.setUniformVec3((uniformStr + "color").c_str(), m_color);
-	shader.setUniformVec3((uniformStr + "position").c_str(), getRelativePosition());
+	shader.setUniformVec3((uniformStr + "position").c_str(), getWorldPosition());
+}
+
+void PointLight::OnDestroyed()
+{
+	LightEntity::OnDestroyed();
+	--m_lightCountByType;
 }
 
 
@@ -77,7 +89,13 @@ void SpotLight::use(const Shader& shader)
 	shader.setUniformf((uniformStr + "outerCutoff").c_str(), m_outerCutoff);
 	shader.setUniformVec3((uniformStr + "color").c_str(), m_color);
 	shader.setUniformVec3((uniformStr + "direction").c_str(), glm::normalize(m_direction));
-	shader.setUniformVec3((uniformStr + "position").c_str(), getRelativePosition());
+	shader.setUniformVec3((uniformStr + "position").c_str(), getWorldPosition());
 	shader.setUniformf((uniformStr + "intensity").c_str(), m_intensity);
 
+}
+
+void SpotLight::OnDestroyed()
+{
+	LightEntity::OnDestroyed();
+	--m_lightCountByType;
 }

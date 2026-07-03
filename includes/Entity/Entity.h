@@ -15,8 +15,10 @@ class Texture;
 
 class Entity 
 {
+	friend Scene;
 	static constexpr size_t MAX_NAME_LENGTH = 32;
-	
+
+
 public:
 	virtual ~Entity() = default;
 
@@ -33,16 +35,24 @@ protected:
 	Texture* m_icon{};
 	bool m_hasIcon{};
 
+	bool m_pendingDestruction{};
+
 	// Returns success state boolean
 	void findAndRemoveChild(Entity* child);
 public:
 
-	void setParent(Entity* child);
+	void setParent(Entity* parent);
+	Entity* getParent() const;
+	void addChild(Entity* child);
+	void removeParent();
+	void reparentAllChildren(Entity* newParent);
 
-	std::vector<Entity*> getChildren() const;
-	glm::vec3 getRelativePosition() const { return m_position;}
-	glm::vec3 getWorldPosition() const;
-	glm::vec3 getRelativeRotationAxis() const { return m_currentRotationAxis; }
+	bool isPendingDestruction();
+
+	[[nodiscard]] std::vector<Entity*> getChildren() const;
+	[[nodiscard]] glm::vec3 getRelativePosition() const { return m_position;}
+	[[nodiscard]] glm::vec3 getWorldPosition() const;
+	[[nodiscard]] glm::vec3 getRelativeRotationAxis() const { return m_currentRotationAxis; }
 	float getRelativeRotationAngle() const{ return m_currentRotationAngle; }
 
 	void setPosition(glm::vec3 pos) { m_position = pos; }
@@ -69,6 +79,12 @@ public:
 
 	// Transform matrix globally after parent transformation
 	virtual glm::mat4 getGlobalTransformMatrix();
+
+	Delegate<Entity*> OnEntityDestroyed_WithEntity;
+	Delegate<> OnEntityDestroyed;
+
+protected:
+	virtual void OnDestroyed();
 };
 
 

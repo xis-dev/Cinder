@@ -44,6 +44,9 @@ public:
 	virtual void imguiDraw() override;
 	virtual void use(const Shader& shader) override;
 
+protected:
+	virtual void OnDestroyed() override;
+
 };
 
 class PointLight : public LightEntity {
@@ -64,13 +67,6 @@ public:
 	float m_linear{};
 	float m_quadratic{};
 
-	// Point Map FBO Attachment
-	unsigned shadowMap;
-
-	void initShadowMap()
-	{
-
-	}
 
 	glm::vec3 getAttenuationValues(float radius, float threshold = 0.01f, float ratio = 1.0f, float constant = 1.0f)
 	{
@@ -86,6 +82,9 @@ public:
 
 	virtual void imguiDraw() override;
 	virtual void use(const Shader& shader) override;
+
+protected:
+	virtual void OnDestroyed() override;
 };
 
 class SpotLight : public LightEntity {
@@ -105,4 +104,7 @@ public:
 
 	virtual void imguiDraw() override;
 	virtual void use(const Shader& shader) override;
+
+protected:
+	virtual void OnDestroyed() override;
 };
