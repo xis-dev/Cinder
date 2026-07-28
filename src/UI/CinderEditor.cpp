@@ -2,7 +2,7 @@
 // Created by PC on 30-Jun-26.
 //
 
-#include "../../includes/UI/ImGuiHolder.h"
+#include "../../includes/UI/CinderEditor.h"
 
 #include "Engine.h"
 #include "imgui.h"
@@ -10,8 +10,9 @@
 #include "imgui_impl_glfw.h"
 
 
-void ImGuiHolder::initialize(GLFWwindow *window, Scene *scene, Renderer *renderer)
+void CinderEditor::initialize(GLFWwindow *window, Scene *scene, Renderer *renderer)
 {
+
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -46,7 +47,7 @@ void ImGuiHolder::initialize(GLFWwindow *window, Scene *scene, Renderer *rendere
 
 }
 
-void ImGuiHolder::renderMenuBar()
+void CinderEditor::renderMenuBar()
 {
     if (ImGui::BeginMainMenuBar())
     {
@@ -77,7 +78,7 @@ void ImGuiHolder::renderMenuBar()
 }
 
 
-void ImGuiHolder::startRender()
+void CinderEditor::startRender()
 {
     // setup imgui for a new frame
     ImGui_ImplOpenGL3_NewFrame();
@@ -88,6 +89,8 @@ void ImGuiHolder::startRender()
 
     renderMenuBar();
 
+    std::vector<ImGuiPanel*> sortedPanelNames;
+    int currentIdx = 0;
     for (auto& panel : m_panels)
     {
         panel->render();
@@ -96,14 +99,14 @@ void ImGuiHolder::startRender()
 
 }
 
-void ImGuiHolder::endRender()
+void CinderEditor::endRender()
 {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 
-void ImGuiHolder::OnWindowSizeChanged(GLFWwindow *win, int w, int h)
+void CinderEditor::OnWindowSizeChanged(GLFWwindow *win, int w, int h)
 {
     std::cout << "New win size: " << w << ", " << h << std::endl;
 

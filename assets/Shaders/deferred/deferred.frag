@@ -1,10 +1,9 @@
 #version 330 core
 
 
-layout (location = 0) out vec4 g_Position;
-layout (location = 1) out vec4 g_ColorSpec;
-layout (location = 2) out vec4 g_Normal;
-layout (location = 3) out vec4 g_Material;
+layout (location = 0) out vec4 g_ColorSpec;
+layout (location = 1) out vec4 g_Normal;
+layout (location = 2) out vec4 g_Material;
 
 in vec2 v_UV;
 in vec3 v_WorldNormal;
@@ -56,7 +55,6 @@ void main() {
     int numberOfNormalMaps = clamp(u_NormalMapCount, 0, MAX_MAPS_NORMAL);
     int numberOfHeightMaps = clamp(u_HeightMapCount, 0, MAX_MAPS_HEIGHT);
 
-    g_Position = vec4(v_WorldPos, 1.0);
 
     vec3 tangentViewDir = normalize(v_TangentCameraPos - v_TangentFragPos);
 

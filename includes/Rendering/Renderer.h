@@ -9,6 +9,10 @@
 #include <vector>
 #include <string>
 
+#include "GBuffer.h"
+#include "Techniques/DeferredLightPass.h"
+#include "Techniques/SSAORenderPass.h"
+
 struct AssetManager;
 class Camera;
 class Texture;
@@ -33,14 +37,9 @@ public:
     };
     std::string shadowMatNames[6];
     unsigned cubeMapTex;
-    unsigned addonVAO{};
 
-    unsigned gBuffer;
-    unsigned gPosition, gColorSpec, gNormal, gDepthStencil, gMaterial;
-    unsigned ssaoFBO, ssaoColor, ssaoDepth, ssaoNoise;
-    unsigned ssaoBlurFBO, ssaoBlurColor;
-    unsigned deferredFbo, deferredColor, deferredDepthStencil;
     unsigned hdrFBO, hdrDepthStencil;
+    unsigned bloomFBO, bloomColor;
     unsigned hdrColorTexs[2];
     unsigned pingPongFBOs[2];
     unsigned pingPongColorBuffers[2];
@@ -48,6 +47,9 @@ public:
     unsigned shadowFBO, shadowTex;
     unsigned pointShadowFBO, pointShadowTex;
 
+    GBuffer m_GBuffer;
+    SSAORenderPass m_SSAOPass;
+    DeferredLightPass m_LightPass;
 
     int renderWidth{};
     int renderHeight{};
@@ -63,24 +65,13 @@ public:
     bool fbo1{};
 
     std::vector<glm::mat4> shadowTransforms{};
-    std::vector<glm::vec3> ssaoKernel;
 
     float gamma{ 2.2f };
-    float ssaoStr{2.0f};
     bool useSSAO{true};
     float parallaxScale{ 0.2f };
     float hdrExposure{ 1.0f };
     bool bloom{true};
 private:
-    void setupGBuffer(unsigned &framebuffer, unsigned &position, unsigned &colorSpec, unsigned &normal, unsigned &material, unsigned &
-                      depthStencil, int w, int h);
-    // Update g-buffer, does not set texture parameters again
-    void updateGBuffer(unsigned &framebuffer, unsigned &position, unsigned &colorSpec, unsigned &normal, unsigned &material, unsigned &
-                  depthStencil, int w, int h);
-    void setupSSAO(unsigned& fb, unsigned& c, unsigned& fb_blur, unsigned& c_blur, int w, int h);
-    void updateSSAO(unsigned& fb, unsigned& c, unsigned& fb_blur, unsigned& c_blur, int w, int h);
-    void setupSSAONoise();
-    void drawAddon(int indexCount);
     void createSkybox();
     void drawSkybox(const Camera& cam);
     unsigned createFBO(unsigned *colorTexts, int colorTexCount, unsigned depthStencil = 0);
@@ -92,7 +83,7 @@ private:
     void renderScene(const Camera &cam, unsigned fboToRenderTo, int sceneW, int sceneH);
     void renderShadowMap();
     void renderPointMap(Scene *currentScene);
-    std::vector<glm::vec3> getSsaoKernel();
+
 
 
 
@@ -105,7 +96,6 @@ public:
     unsigned getFinalSceneTexture();
 
     void changeViewportSize(int w, int h);
-
 
     void destroy();
 

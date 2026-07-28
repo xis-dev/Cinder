@@ -1,16 +1,21 @@
-//
-// Created by PC on 25-Jul-26.
-//
-
-#ifndef FOLDER_GBUFFER_H
-#define FOLDER_GBUFFER_H
+#pragma once
+#include "FrameBuffer.h"
 
 
 
-class GBuffer {
+class GBuffer
+{
+public:
+    FrameBuffer frameBufferHolder;
 
+    unsigned gDepth{};
+    unsigned gColorSpec{};
+    unsigned gNormal{};
+    unsigned gMaterial{};
+
+    unsigned stencilBuffer{};
+
+    void setup(int width, int height);
+    void update(int width, int height);
 };
 
-
-
-#endif //FOLDER_GBUFFER_H

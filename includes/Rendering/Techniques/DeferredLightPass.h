@@ -1,16 +1,28 @@
-//
-// Created by PC on 26-Jul-26.
-//
+#pragma once
 
-#ifndef FOLDER_DEFERREDLIGHTPASS_H
-#define FOLDER_DEFERREDLIGHTPASS_H
+#include "RenderPass.h"
+#include "Scene.h"
+#include "SSAORenderPass.h"
 
+class DeferredLightPass: public IRenderPassConfigurer<const SSAORenderPass&, unsigned,
+                                                    Scene*, const Camera&>
+{
+private:
+    Shader* m_shader{nullptr};
+public:
+    DeferredLightPass() = default;
+    DeferredLightPass(int w, int h, Shader *shader);
 
+    FrameBuffer buffer;
+    bool useBlinn{true};
 
-class DeferredLightPass {
+    unsigned getOutput(int index) const override;
 
+    void updatePassSize(int w, int h) override;
+
+protected:
+    virtual void configuredRender(const FrameContext &ctx, const SSAORenderPass& ssaoPass, unsigned shadowMapBuffer,
+                                  Scene* scene, const Camera& cam) override;
 };
 
 
-
-#endif //FOLDER_DEFERREDLIGHTPASS_H

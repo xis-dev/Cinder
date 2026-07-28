@@ -24,7 +24,6 @@ in vec2 v_UV;
 
 const float kPI = 3.14159265;
 
-uniform float u_HDRExposure;
 
 #define MAX_POINT_LIGHTS 20
 #define MAX_SPOT_LIGHTS 1
@@ -37,19 +36,23 @@ uniform int u_PointLightCount;
 uniform DirectionalLight u_DirectionalLights[MAX_DIR_LIGHTS];
 uniform PointLight u_PointLights[MAX_POINT_LIGHTS];
 
-uniform sampler2D u_GPosition;
+uniform sampler2D u_GDepth;
 uniform sampler2D u_GColorSpec;
 uniform sampler2D u_GNormal;
 uniform sampler2D u_GMaterial;
 uniform sampler2D u_SSAO;
 
-uniform vec3 u_CameraPosition;
-uniform mat4 u_LightSpaceMatrix;
+uniform mat4 m_InvView;
+uniform mat4 m_InvProjection;
 
-uniform float u_Gamma;
-uniform float u_FarPlane;
+uniform vec3 u_CameraPosition;
+uniform mat4 m_LightSpace;
+
 uniform bool u_Blinn;
 uniform bool u_SSAOActive;
+
+uniform float u_NearPlane;
+uniform float u_FarPlane;
 
 uniform sampler2D u_ShadowMap;
 uniform samplerCube[MAX_POINT_LIGHTS] t_PointMaps;
@@ -66,29 +69,45 @@ vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
 vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex);
 vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex, samplerCube shadowMap);
 
+
+vec3 projectedDepthToWorld(vec2 texCoord, float depth) {
+  // float z = reconstituteViewZ(texture(u_GDepth, v_UV).r);
+
+    float z = depth * 2.0 - 1.0;
+
+    float x = (texCoord.x * 2.0 - 1.0);
+    float y = (texCoord.y * 2.0 - 1.0);
+
+    vec4 clipPos = vec4(x, y, z, 1.0);
+    vec4 viewPos = m_InvProjection * clipPos;
+    viewPos /= viewPos.w;
+
+    return vec3(m_InvView * viewPos);
+
+}
+float calcLuminance(vec3 colour) {
+    return 0.2126 * colour.r + 0.7152 * colour.g + 0.0722 * colour.b;
+}
+
+float linearizeDepth(float depth) {
+    float z = depth * 2.0 - 1.0;
+    return (2.0 * u_NearPlane * u_FarPlane) / (u_FarPlane + u_NearPlane - z * (u_FarPlane - u_NearPlane));
+}
+
 vec4 lightSpacePos;
 vec3 worldPos;
 
-vec3 myReflect(vec3 v, vec3 a) {
-    vec3 vNorm = normalize(v);
-    vec3 aNorm = normalize(a);
-
-    vec3 vPar = dot(vNorm, aNorm) * aNorm;
-    vec3 vPerp = vNorm - vPar;
-    vPar *= -1;
-
-    // reduced form but didnt want to use the pregiven one
-    //return (vNorm - (2 * (dot(vNorm, aNorm) * aNorm))) * length(v);
-    return (vPerp + vPar) * length(v);
-}
 
 void main(){
 
     int numberOfDirLights = clamp(u_DirLightCount, 0, MAX_DIR_LIGHTS);
     int numberOfPointLights = clamp(u_PointLightCount, 0, MAX_POINT_LIGHTS);
 
+    worldPos = projectedDepthToWorld(v_UV, texture(u_GDepth, v_UV).r);
+
+
     vec3 norm = texture(u_GNormal, v_UV).rgb * 2.0 - 1.0;
-    vec3 viewDir = normalize(u_CameraPosition - texture(u_GPosition, v_UV).rgb);
+    vec3 viewDir = normalize(u_CameraPosition - worldPos);
 
     vec3 diffuseTex = texture(u_GColorSpec, v_UV).rgb;
     vec3 specularTex = vec3(texture(u_GColorSpec, v_UV).a);
@@ -99,8 +118,7 @@ void main(){
     vec3 ambient = texture(u_GMaterial, v_UV).r * ambientCol * diffuseTex * ambientOcclusion;
     vec3 result = ambient;
 
-    worldPos = texture(u_GPosition, v_UV).rgb;
-    lightSpacePos = (u_LightSpaceMatrix * vec4(worldPos, 1.0));
+    lightSpacePos = (m_LightSpace * vec4(worldPos, 1.0));
 
     for (int i = 0; i < numberOfDirLights; i++) {
         result += calcDirLight(u_DirectionalLights[i], norm, viewDir, diffuseTex, specularTex);
@@ -111,9 +129,11 @@ void main(){
         result += calcPointLight(u_PointLights[i], norm, viewDir, diffuseTex, specularTex, t_PointMaps[i]);
     }
 
-//
-//    vec3 mapped = vec3(1.0) - exp(-result * u_HDRExposure);
-//    mapped = pow(mapped, vec3(1.0/u_Gamma));
+//    BloomColor = vec4(0.0);
+//    if (calcLuminance(result) > 1.0) {
+//        BloomColor = vec4(result, 1.0);
+//    }
+
     FragColor = vec4(result, 1.0);
 }
 
@@ -163,7 +183,7 @@ vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffus
         float energyConserv = ( 2.0 + texture(u_GMaterial, v_UV).a ) / ( 2.0 * kPI );
         vec3 reflectedDir = vec3(0.0);
         if (u_SSAOActive) {
-             reflectedDir = normalize(myReflect(-lightDir,normal));
+             reflectedDir = normalize(reflect(-lightDir,normal));
         }
         else {
             reflectedDir = normalize(reflect(-lightDir,normal));
@@ -213,7 +233,7 @@ vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex
     float dist = length(light.position - worldPos);
 
     float spec = 0.0;
-    if (u_Blinn) {
+        if (u_Blinn) {
 
         float energyConserv = ( 8.0 + texture(u_GMaterial, v_UV).a ) / ( 8.0 * kPI );
         vec3 halfwayDir = normalize(lightDir + viewDir);
@@ -244,6 +264,7 @@ vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex
     float diskRadius = (1.0 + (length(u_CameraPosition - worldPos) / light.radius)) / 25.0;
     float shadow = pointShadowCalc(light.position,worldPos, bias, diskRadius, shadowMap, light.radius);
     vec3 result = ((1.0 - shadow) * (diffuse + specular)) * light.intensity;
+
 
     return result;
 

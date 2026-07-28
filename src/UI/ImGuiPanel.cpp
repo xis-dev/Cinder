@@ -21,6 +21,12 @@ bool ImGuiPanel::beginFrame()
   return ImGui::Begin(m_name.c_str(), &m_open, m_flags);
 }
 
+void ImGuiPanel::update()
+{
+    ImVec2 size = ImGui::GetContentRegionAvail();
+    panelSize = {size.x, size.y};
+}
+
 
 void ImGuiPanel::endFrame()
 {
@@ -85,6 +91,7 @@ void PropertiesPanel::entityDestroyed(Entity *entity)
 
 void PropertiesPanel::update()
 {
+    ImGuiPanel::update();
     if (m_selectedEntity)
     {
         m_selectedEntity->imguiDraw();
@@ -134,6 +141,7 @@ renderEntityHierarchy(Entity *entity)
 
 void SceneHierarchyPanel::update()
 {
+    ImGuiPanel::update();
     if (ImGui::Button("Add Entity"))
     {
         if (ImGui::BeginPopup("add_entity_type"))
@@ -156,6 +164,7 @@ Entity * SceneHierarchyPanel::getSelectedEntity()
 
 void RenderPanel::update()
 {
+    ImGuiPanel::update();
     ImVec2 viewportSize = ImGui::GetContentRegionAvail();
 
     float viewW = viewportSize.x;
@@ -181,16 +190,18 @@ void RenderPanel::update()
 
 void RenderConfigPanel::update()
 {
+    ImGuiPanel::update();
     // ImGui::DragFloat("Camera Speed", &camera.m_speed, 1.0f);
     // ImGui::DragFloat("Camera Far Plane", &camera.m_farPlane, 0.1f);
     // ImGui::DragFloat("Camera Near Plane", &camera.m_nearPlane, 0.01f);
-    ImGui::DragFloat("SSAO Strength", &RENDERER->ssaoStr, 0.1f);
     ImGui::DragFloat("Gamma Correction exp", &RENDERER->gamma, 0.1f);
     ImGui::DragFloat("Parallax Map Height", &RENDERER->parallaxScale, 0.1f);
     ImGui::DragFloat("HDR Exposure", &RENDERER->hdrExposure, 0.1f);
     ImGui::Checkbox("SSAO", &RENDERER->useSSAO);
     ImGui::Checkbox("Grid", &RENDERER->drawGrid);
     ImGui::Checkbox("HDR", &RENDERER->hdr);
+    ImGui::Checkbox("Bloom", &RENDERER->bloom);
+    RENDERER->m_SSAOPass.imguiRender();
     ImGui::Checkbox("Draw Cubemap", &RENDERER->cubeMapEnabled);
     ImGui::Checkbox("Enable Backface Culling", &RENDERER->cullBackface);
     ImGui::Checkbox("Draw Wireframe", &RENDERER->drawWireframe);

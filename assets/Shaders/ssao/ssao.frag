@@ -4,55 +4,76 @@ out float FragColor;
 
 in vec2 v_UV;
 
-uniform sampler2D u_GPosition;
-uniform sampler2D u_GColorSpec;
-uniform sampler2D u_GNormal;
+uniform sampler2D t_GDepth;
+uniform sampler2D t_GNormal;
 
 uniform sampler2D t_Noise;
 
-uniform vec3 samples[64];
+uniform mat4 m_View;
+uniform mat4 m_InvProjection;
+uniform mat4 m_Projection;
 
-uniform mat4 u_ViewMatrix;
-uniform mat4 u_Projection;
+uniform vec2 u_WindowSize;
+uniform vec2 u_NoiseSize;
 
-uniform float u_SsaoPow;
+uniform float u_SampleRadius;
+uniform float u_SampleBias;
+uniform float u_Strength;
+
+uniform vec3 u_SampleKernel[64];
+
 const int kernelSize = 64;
-const float sampleRad = 0.5;
-const float bias = 0.025;
 
-const vec2 noiseScale = vec2(1600.0/4.0, 900.0/4.0);
+vec3 depthToViewPos(vec2 uv, float depth) {
+
+    // Ensure w is 1
+    vec4 viewPos = vec4(1.0);
+    // Back to ndc
+    viewPos.x = uv.x * 2.0 - 1.0;
+    viewPos.y = uv.y * 2.0 - 1.0;
+    viewPos.z = depth * 2.0 - 1.0;
+
+    // Undo projection & divide by correct w for view
+    viewPos = m_InvProjection * viewPos;
+
+    return viewPos.xyz/viewPos.w;
+}
 
 void main() {
-    vec3 fragPos = texture(u_GPosition, v_UV).xyz;
-    fragPos = (u_ViewMatrix * vec4(fragPos, 1.0)).xyz;
-    vec3 color = texture(u_GColorSpec, v_UV).rgb;
+    // Noise scale for render based on window
 
-    vec3 normal = (texture(u_GNormal, v_UV).rgb * 2.0 - 1.0);
-    normal = normalize(mat3(u_ViewMatrix) * normal);
 
-    vec3 randomVec = texture(t_Noise, v_UV * noiseScale).xyz;
+    vec2 noiseScale = u_WindowSize/u_NoiseSize;
 
-    vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
-    vec3 bitangent = cross(normal, tangent);
-    mat3 TBN       = mat3(tangent, bitangent, normal);
+    vec3 fragPos_View = depthToViewPos(v_UV, texture(t_GDepth, v_UV).r);
+
+
+    vec3 normal_View = normalize(mat3(m_View) * (texture(t_GNormal, v_UV).rgb * 2.0 - 1.0));
+    vec3 randomVec = texture(t_Noise, v_UV * noiseScale).rgb;
+
+    vec3 tangent = normalize(randomVec - dot(randomVec, normal_View) * normal_View);
+    vec3 bitangent = cross(normal_View, tangent);
+    mat3 TBN = mat3(tangent, bitangent, normal_View);
 
     float occlusion = 0.0;
-    for (int i = 0; i < kernelSize; ++i) {
-        vec3 samplePos = TBN * samples[i];
-        samplePos = fragPos + samplePos * sampleRad;
+    for (int i = 0; i < 64; i++) {
+        vec3 samplePos = TBN * u_SampleKernel[i];
+        samplePos = fragPos_View + samplePos * u_SampleRadius;
 
-        vec4 offset = u_Projection * vec4(samplePos, 1.0);
-        offset.xyz /= offset.w;
-        offset.xyz = offset.xyz * 0.5 + 0.5;
+        vec4 screenPos = m_Projection * vec4(samplePos, 1.0);
+        screenPos /= screenPos.w;
+        screenPos.xyz = screenPos.xyz * 0.5 + 0.5;
 
-        vec3 sampleWorldPos = texture(u_GPosition, offset.xy).xyz;
-        float sampleDepth = (u_ViewMatrix * vec4(sampleWorldPos, 1.0)).z;
+        // TODO: Switch depth so its depth from view not world
 
-        float rangeCheck = smoothstep(0.0, 1.0, sampleRad / abs(fragPos.z - sampleDepth));
-        occlusion += (sampleDepth >= samplePos.z + bias ? 1.0 : 0.0) * rangeCheck;
+        vec3 sampleDepthPos = depthToViewPos(screenPos.xy, texture(t_GDepth, screenPos.xy).r);
+
+        float rangeCheck = smoothstep(0.0, 1.0, u_SampleRadius / abs(fragPos_View.z - sampleDepthPos.z));
+        occlusion += (sampleDepthPos.z >= samplePos.z + u_SampleBias ? 1.0 : 0.0) * rangeCheck;
     }
 
-    occlusion = 1.0 - (occlusion / float(kernelSize));
-    occlusion = pow(occlusion, u_SsaoPow);
+  //  occlusion = occlusion > 0.0 ? 1.0 : 0.0;
+    occlusion = 1.0 - (occlusion / kernelSize);
+    occlusion = pow(occlusion, u_Strength);
     FragColor = occlusion;
 }

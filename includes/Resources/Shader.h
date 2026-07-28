@@ -22,6 +22,9 @@ private:
 	void errorCheck(unsigned object, ObjectType type);
 	std::string getShaderSource(const char* fileName);
 
+	std::string vertShader;
+	std::string fragShader;
+
 public:
 	mutable std::unordered_map<std::string, int> uniformLocations;
 
@@ -49,7 +52,9 @@ public:
 	void setUniformf(const char* name, float value) const;
 	void setUniformMat4(const char* name, glm::mat4 value) const;
 	void setUniformVec3(const char* name, glm::vec3 value) const;
+	void setUniformVec2(const char* name, glm::vec2 value) const;
 	void setUniformVec3Array(const char* name, const glm::vec3* data, int count) const;
+
 	void use() const;
 
 

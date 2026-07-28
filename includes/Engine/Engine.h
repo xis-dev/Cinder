@@ -1,7 +1,7 @@
 #pragma once
 
-
 #include <glad/glad.h>
+
 #include <GLFW/glfw3.h>
 
 
@@ -40,7 +40,7 @@
 #include <map>
 #include <memory>
 
-#include "ImGuiHolder.h"
+#include "../UI/CinderEditor.h"
 #include "UI/ImGuiPanel.h"
 
 
@@ -85,13 +85,13 @@ private:
 	std::unique_ptr<Renderer> renderer{std::make_unique<Renderer>()};
 	std::unique_ptr<AssetManager> m_assetManager{std::make_unique<AssetManager>()};
 	std::unique_ptr<ModelLoader> m_modelLoader{std::make_unique<ModelLoader>(m_assetManager.get())};
-	std::unique_ptr<ImGuiHolder> m_imguiHolder{std::make_unique<ImGuiHolder>()};
+	std::unique_ptr<CinderEditor> m_editor{std::make_unique<CinderEditor>()};
 
 
 	static std::unique_ptr<FileLoader> m_FileLoader;
 
 	std::map<float, MeshEntity*> transparentObj{};
-	Camera camera = Camera( glm::vec3(0.0f, 10.0f, -30.0f),glm::vec3(0.0f, 0.0f, 1.0f), 45.0f, static_cast<float>(scrWidth) /(scrHeight), 15.0f);
+	Camera camera = Camera( glm::vec3(0.0f, 10.0f, -30.0f),glm::vec3(0.0f, 0.0f, 1.0f), 45.0f, static_cast<float>(scrWidth) /(scrHeight), 50.0f, 0.1, 10000);
 
 
 	 void init(GLFWwindow*& window);
@@ -103,7 +103,6 @@ private:
 	  void imguiInit();
 	 void imguiUpdate();
 	void imguiRenderScene();
-	void imguiMenuBar();
 
 	 void imguiRender();
 
@@ -115,6 +114,7 @@ private:
 	void createMaterials();
 
 	void createObjectIcons();
+
 
 	Entity* createFloor();
 

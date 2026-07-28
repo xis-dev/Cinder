@@ -174,7 +174,7 @@ unsigned Texture::createEmptyTex(const int w, const int h, GLenum internalFormat
 	unsigned id;
 	glGenTextures(1, &id);
 	glBindTexture(GL_TEXTURE_2D, id);
-	glTexImage2D(GL_TEXTURE_2D, 0, (GLint)internalFormat, w, h, 0, desiredFormat, type, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, (GLint)internalFormat, w, h, 0, desiredFormat, type, nullptr);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

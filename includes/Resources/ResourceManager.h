@@ -80,8 +80,13 @@ public:
 
 	T* get(const std::string& name)
 	{
-		auto& handleID = nameToHandleID[name];
-		return resources[handleID].get();
+		auto handleIt = nameToHandleID.find(name);
+		if (handleIt != nameToHandleID.end())
+		{
+			return resources[handleIt->second].get();
+		}
+
+		return nullptr;
 	}
 
 	Handle<T> getHandle(const std::string& name)

@@ -108,18 +108,16 @@ void Engine::run(const int w, const int h, const std::string& title)
 
 	// TODO: replace and construct better with systems
 	init(m_window);
+
 	while (!glfwWindowShouldClose(m_window))
 	{
 		glfwPollEvents();
 
 		deltaTimeUpdate();
-
-		m_imguiHolder->startRender();
-
 		sInput();
 		sRendering();
-
-		m_imguiHolder->endRender();
+		m_editor->startRender();
+		m_editor->endRender();
 		m_currentScene->end();
 
 		glfwSwapBuffers(m_window);
@@ -166,9 +164,7 @@ void Engine::init(GLFWwindow*& window)
 		std::cout << "FAILED TO INITIALIZE GLAD. \n";
 	}
 
-	m_currentScene->init(m_assetManager.get());
-	// Init renderer with 1,1 size, will take upon the size of render panel in user interface
-	renderer->init(m_window, m_assetManager.get(), m_currentScene.get(), 1, 1);
+
 
 	// Disable vsync
 	glfwSwapInterval(0);
@@ -189,7 +185,6 @@ void Engine::init(GLFWwindow*& window)
 	glfwSetDropCallback		      (window, Engine::fileDropCallback);
 	glfwSetInputMode              (window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-	m_imguiHolder->initialize(m_window, m_currentScene.get(), renderer.get());
 
 
 	Cube::computeTangents();
@@ -207,6 +202,10 @@ void Engine::init(GLFWwindow*& window)
 
 	createObjectIcons();
 
+	m_editor->initialize(m_window, m_currentScene.get(), renderer.get());
+	m_currentScene->init(m_assetManager.get());
+	// Init renderer with 1,1 size, will take upon the size of render panel in user interface
+	renderer->init(m_window, m_assetManager.get(), m_currentScene.get(), 1, 1);
 
 	auto sponza = loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/sponza_palace/scene.gltf");
 	auto sponzaEnt = m_currentScene->createEntity<MeshEntity>("Robot", m_assetManager->models.get(sponza));
@@ -296,7 +295,6 @@ void Engine::imguiUpdate()
 
 	ImGui::DockSpaceOverViewport();
 
-	imguiMenuBar();
 
 	// initialize and assign entity names for imgui dropdown
 	std::vector<const char*> entityNames{};
@@ -421,7 +419,6 @@ void Engine::imguiUpdate()
 	ImGui::DragFloat("Camera Speed", &camera.m_speed, 1.0f);
 	ImGui::DragFloat("Camera Far Plane", &camera.m_farPlane, 0.1f);
 	ImGui::DragFloat("Camera Near Plane", &camera.m_nearPlane, 0.01f);
-	ImGui::DragFloat("SSAO Strength", &renderer->ssaoStr, 0.1f);
 	ImGui::DragFloat("Gamma Correction exp", &renderer->gamma, 0.1f);
 	ImGui::DragFloat("Parallax Map Height", &renderer->parallaxScale, 0.1f);
 	ImGui::DragFloat("HDR Exposure", &renderer->hdrExposure, 0.1f);
@@ -454,24 +451,6 @@ void Engine::imguiRenderScene()
 		viewportSize.y = viewportSize.x * (9./16.);
 		ImGui::Image((ImTextureID)(intptr_t)renderer->getFinalSceneTexture(), ImVec2(viewportSize.x, viewportSize.y), ImVec2(0, 1), ImVec2(1, 0));
 		ImGui::End();
-}
-
-void Engine::imguiMenuBar()
-{
-	if (ImGui::BeginMainMenuBar())
-	{
-		if (ImGui::BeginMenu("File"))
-		{
-			if (ImGui::MenuItem("New")){}
-			if (ImGui::BeginMenu("Open", "Ctrl+O"))
-			{
-				ImGui::MenuItem("testfile.cpp");
-				ImGui::EndMenu();
-			}
-			ImGui::EndMenu();
-		}
-		ImGui::EndMainMenuBar();
-	}
 }
 
 
@@ -519,8 +498,8 @@ void Engine::createShaders()
 
 	m_assetManager->shaders.add(Shader("assets/Shaders/shadow/pointMap.vert", "assets/Shaders/shadow/pointMap.frag", "assets/Shaders/shadow/pointMap.geom"), "pointMap");
 	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/hdr.frag"), "HDR");
-	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/bloomBlur.frag"), "bloomBlur");
-	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/bloom.frag"), "bloom");
+	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/bloom_blur.frag"), "bloomBlur");
+	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/bloom_new.frag"), "bloom");
 
 	m_assetManager->shaders.add(Shader("assets/Shaders/default.vert", "assets/Shaders/deferred/deferred.frag"), "deferredShader");
 	m_assetManager->shaders.add(Shader("assets/Shaders/screen.vert", "assets/Shaders/deferred/lightPass.frag"), "deferredLightPass");
@@ -547,8 +526,10 @@ void Engine::createMaterials()
 {
 	m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle("lit")), "default");
 
-	m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle(SHADER_DEFAULT_TEXTURED_LIT)), "lit");
+	auto litHandle = m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle(SHADER_DEFAULT_TEXTURED_LIT)), "lit");
 
+	auto* mat = m_assetManager->materials.get(litHandle);
+	mat->setColor(999.0f, 1.0f, 333.0f);
 	m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle("unlit")), "unlit");
 
 	m_assetManager->materials.add(Material(m_assetManager->shaders.getHandle(SHADER_DEFAULT_TEXTURED_LIT),

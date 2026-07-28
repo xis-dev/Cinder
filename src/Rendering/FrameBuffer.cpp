@@ -1,11 +1,12 @@
-#include "../../includes/Rendering/RenderPass.h"
+#include "../../includes/Rendering/FrameBuffer.h"
 
 #include <iostream>
+#include <iterator>
 
 #include "Texture.h"
 
 
-RenderPass::RenderPass(const std::vector<unsigned>& colourAttachments)
+FrameBuffer::FrameBuffer(const std::vector<unsigned>& colourAttachments)
 {
     glGenFramebuffers(1, &frameBuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
@@ -27,14 +28,16 @@ RenderPass::RenderPass(const std::vector<unsigned>& colourAttachments)
 
     glDrawBuffers(drawBuffers.size(), drawBuffers.data());
 
+        std::cerr << "RENDER_PASS:: framebuffer status: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << "\n" ;
+
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
-        std::cout << "RENDER_PASS:: Incomplete framebuffer." << glCheckFramebufferStatus(GL_FRAMEBUFFER) << "\n" ;
+        std::cerr << "RENDER_PASS:: Incomplete framebuffer." << glCheckFramebufferStatus(GL_FRAMEBUFFER) << "\n" ;
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void RenderPass::attachColourBuffer(unsigned buffer, bool isTexture)
+void FrameBuffer::attachColourBuffer(unsigned buffer, bool isTexture)
 {
     if (m_colourBuffers.size() > GL_MAX_COLOR_ATTACHMENTS) return ;
 
@@ -62,7 +65,7 @@ void RenderPass::attachColourBuffer(unsigned buffer, bool isTexture)
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
-        std::cout << "RENDER_PASS:: Incomplete framebuffer while adding colour buffer." << glCheckFramebufferStatus(GL_FRAMEBUFFER) << "\n" ;
+        std::cerr << "FRAMEBUFFER:: Incomplete framebuffer while adding colour buffer." << glCheckFramebufferStatus(GL_FRAMEBUFFER) << "\n" ;
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -70,48 +73,71 @@ void RenderPass::attachColourBuffer(unsigned buffer, bool isTexture)
 
 }
 
-void RenderPass::attachDepthBuffer(unsigned buffer, bool isTexture, GLint attachment)
+void FrameBuffer::attachDepthBuffer(unsigned buffer, bool isTexture, GLint attachment)
 {
     attachBuffer(buffer, isTexture, attachment);
 
     depth = buffer;
 }
 
-void RenderPass::attachStencilBuffer(unsigned buffer, bool isTexture, GLint attachment)
+void FrameBuffer::attachStencilBuffer(unsigned buffer, bool isTexture, GLint attachment)
 {
     attachBuffer(buffer, isTexture, attachment);
 
     stencil = buffer;
 }
 
-
-
-
-void RenderPass::updateColourBuffer(int index, int width, int height, GLint format, GLint storageType, bool isTexture)
+bool FrameBuffer::updateColourBuffer(int index, int width, int height, GLint format, GLint storageType, bool isTexture,
+    bool lookForIndexAsBuffer)
 {
-    if (index < 0 || index >= m_colourBuffers.size())   return;
+    unsigned id = 0;
+    GLint attachment{};
+    if (lookForIndexAsBuffer)
+    {
+        auto bufferIt = std::find_if(m_colourBuffers.begin(), m_colourBuffers.end(), [&](unsigned buffer) {return buffer == index;});
+        if (bufferIt == m_colourBuffers.end()) return false;
 
-
-    const unsigned id = m_colourBuffers[index];
-    const GLint attachment = GL_COLOR_ATTACHMENT0 + index;
+        id = *bufferIt;
+        attachment = GL_COLOR_ATTACHMENT0 + std::distance(m_colourBuffers.begin(), bufferIt);
+    }
+    else
+    {
+        if (index < 0 || index >= m_colourBuffers.size())   return false;
+         id = m_colourBuffers[index];
+        attachment = GL_COLOR_ATTACHMENT0 + index;
+    }
 
     updateBuffer(id, width, height, attachment, format, storageType, isTexture);
-
+    return true;
 }
 
-void RenderPass::updateDepthBuffer(int width, int height, GLint attachment, GLint storageType, GLint format,
+
+
+void FrameBuffer::updateDepthBuffer(int width, int height, GLint attachment, GLint storageType, GLint format,
     bool isTexture)
 {
     updateBuffer(depth, width, height, attachment, format, storageType, isTexture);
 }
 
-void RenderPass::updateStencilBuffer(int index, int width, int height, GLint attachment, GLint storageType,
+void FrameBuffer::updateStencilBuffer(int width, int height, GLint attachment, GLint storageType,
     GLint format, bool isTexture)
 {
     updateBuffer(stencil, width, height, attachment, format, storageType, isTexture);
 }
 
-void RenderPass::attachBuffer(unsigned buffer, bool isTexture, GLint attachment)
+unsigned FrameBuffer::getColourBuffer(int index) const
+{
+    if (index < 0 || index >= m_colourBuffers.size()) return 0;
+
+    return m_colourBuffers[index];
+}
+
+unsigned FrameBuffer::getFrameBuffer() const
+{
+    return frameBuffer;
+}
+
+void FrameBuffer::attachBuffer(unsigned buffer, bool isTexture, GLint attachment)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
     if (isTexture)
@@ -125,13 +151,13 @@ void RenderPass::attachBuffer(unsigned buffer, bool isTexture, GLint attachment)
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
-        std::cout << "RENDER_PASS:: Incomplete framebuffer while attaching buffer." << glCheckFramebufferStatus(GL_FRAMEBUFFER) << "\n" ;
+        std::cerr << "FRAMEBUFFER:: Incomplete framebuffer while attaching buffer." << glCheckFramebufferStatus(GL_FRAMEBUFFER) << "\n" ;
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void RenderPass::updateBuffer(unsigned buffer, int width, int height, GLint attachment, GLint format, GLint storageType, bool isTexture)
+void FrameBuffer::updateBuffer(unsigned buffer, int width, int height, GLint attachment, GLint format, GLint storageType, bool isTexture)
 {
     if (isTexture)
     {
@@ -169,7 +195,7 @@ void RenderPass::updateBuffer(unsigned buffer, int width, int height, GLint atta
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
-        std::cout << "RENDER_PASS:: Incomplete framebuffer while updating buffer" << glCheckFramebufferStatus(GL_FRAMEBUFFER) << "\n" ;
+        std::cerr << "FRAMEBUFFER:: Incomplete framebuffer while updating buffer" << glCheckFramebufferStatus(GL_FRAMEBUFFER) << "\n" ;
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

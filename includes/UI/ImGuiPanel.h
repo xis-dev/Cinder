@@ -1,10 +1,11 @@
 #pragma once
 
-#include "Rendering/ImGuiHolder.h"
+#include "CinderEditor.h"
 
 
 #include <string>
 #include "imgui.h"
+#include "vec2.hpp"
 
 class Renderer;
 class Entity;
@@ -27,9 +28,10 @@ protected:
     ImGuiWindowFlags m_flags{};
     bool m_open{};
     bool shouldRender{true};
+    glm::vec2 panelSize{};
 
     bool beginFrame();
-    virtual void update() = 0;
+    virtual void update();
     void endFrame();
 public:
     const std::string& getName() const;

@@ -98,7 +98,7 @@ public:
         unbindFunction([owningObject, func](Parameters... p){(owningObject->*func)(p...);});
     }
 
-    void broadcast(Parameters... params) const override
+    void  broadcast(Parameters... params) const override
     {
         for (auto& f: m_functions)
         {

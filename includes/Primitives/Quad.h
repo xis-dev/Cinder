@@ -1,15 +1,30 @@
-namespace Quad
+#pragma once
+
+
+class Quad
 {
 
-	float vertices[16]{
-		-1.0f,  1.0f, 0.0f, 1.0f,
-		-1.0f, -1.0f, 0.0f, 0.0f,
-		 1.0f, -1.0f, 1.0f, 0.0f,
-		 1.0f,  1.0f, 1.0f, 1.0f
+	static unsigned vao;
+	static unsigned vbo;
+	static unsigned ebo;
+
+
+	static void setup();
+	constexpr static float vertices[16]
+	{
+		-1.0f, -1.0f, 0.0f, 0.0f, // bottom left
+		-1.0f,  1.0f, 0.0f, 1.0f, // bottom right
+		1.0f,  1.0f, 1.0f, 1.0f, // top right
+		1.0f, -1.0f, 1.0f, 0.0f // top left
 	};
 
-	unsigned indices[6]{
+	constexpr static unsigned indices[6]{
 		0, 1, 2,
-		2, 3, 0
+		0, 2, 3
 	};
+
+public:
+	static void draw();
+
 };
+

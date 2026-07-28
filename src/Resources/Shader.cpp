@@ -17,6 +17,8 @@ Shader::Shader(const char* vertexFile, const char* fragmentFile)
 	unsigned vertex = glCreateShader(GL_VERTEX_SHADER);
 	unsigned fragment = glCreateShader(GL_FRAGMENT_SHADER);
 
+	vertShader = vertexFile;
+	fragShader = fragmentFile;
 	std::string vertexCode = getShaderSource(vertexFile);
 	std::string fragmentCode = getShaderSource(fragmentFile);
 
@@ -160,6 +162,22 @@ void Shader::setUniformVec3(const char* name, glm::vec3 value) const
 	glUniform3fv(uniformLoc, 1, glm::value_ptr(value));
 }
 
+void Shader::setUniformVec2(const char *name, glm::vec2 value) const
+{
+	auto uniformSet = uniformLocations.find(name);
+	GLint uniformLoc;
+	if (uniformSet != uniformLocations.end())
+	{
+		uniformLoc = uniformSet->second;
+	}
+	else
+	{
+		uniformLoc = glGetUniformLocation(m_id, name);
+		uniformLocations.insert({name, uniformLoc});
+	}
+	glUniform2fv(uniformLoc, 1, glm::value_ptr(value));
+}
+
 void Shader::setUniformVec3Array(const char* name, const glm::vec3* data, int count) const {
 	auto uniformSet = uniformLocations.find(name);
 	GLint uniformLoc;
@@ -169,6 +187,7 @@ void Shader::setUniformVec3Array(const char* name, const glm::vec3* data, int co
 	}
 	else
 	{
+		uniformLoc = glGetUniformLocation(m_id, name);
 		uniformLocations.insert({name, uniformLoc});
 	}
 	glUniform3fv(uniformLoc, count, glm::value_ptr(data[0]));

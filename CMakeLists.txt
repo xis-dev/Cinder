@@ -96,7 +96,7 @@ set (HEADER_SOURCES
 
     includes/Resources/Model.h
         includes/Utilities/AssetManager.h
- "includes/Resources/Handle.h" "includes/Primitives/Skybox.h" "includes/Primitives/Quad.h"
+ "includes/Resources/Handle.h" "includes/Primitives/Skybox.h"
         includes/Utilities/DefaultMacros.h)
 
 set(PROJECT_SOURCES
@@ -139,10 +139,20 @@ set(PROJECT_SOURCES
         src/Rendering/Renderer.cpp
         src/Resources/ModelLoader.cpp
         src/Utilities/FileLoader.cpp
-        includes/Rendering/ImGuiHolder.cpp
-        includes/Rendering/ImGuiHolder.h
+        src/UI/CinderEditor.cpp
+        includes/UI/CinderEditor.h
         src/UI/ImGuiPanel.cpp
-        includes/UI/ImGuiPanel.h)
+        includes/UI/ImGuiPanel.h
+        src/Rendering/FrameBuffer.cpp
+        includes/Rendering/FrameBuffer.h
+        src/Rendering/SSAORenderPass.cpp
+        includes/Rendering/Techniques/SSAORenderPass.h
+        src/Primitives/Quad.cpp
+        includes/Rendering/Techniques/RenderPass.h
+        src/Rendering/GBuffer.cpp
+        includes/Rendering/GBuffer.h
+        src/Rendering/Techniques/DeferredLightPass.cpp
+        includes/Rendering/Techniques/DeferredLightPass.h)
 
 set(IMGUI_SOURCES
         ${imgui_SOURCE_DIR}/imgui.cpp

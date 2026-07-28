@@ -11,10 +11,10 @@ class Renderer;
 class Scene;
 class ImGuiPanel;
 
-class ImGuiHolder
+class CinderEditor
 {
 public:
-    ImGuiHolder() = default;
+    CinderEditor() = default;
 private:
     Scene* CURRENT_SCENE{nullptr};
     Renderer* RENDERER{nullptr};

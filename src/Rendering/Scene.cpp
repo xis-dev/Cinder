@@ -73,6 +73,7 @@ void Scene::illuminate(const Shader& shader) const
 	{
 		light->use(shader);
 	}
+	applyLightCountsToShader(shader);
 }
 
 void Scene::render(const Camera &cam) const
