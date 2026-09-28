@@ -39,6 +39,64 @@ glm::vec3 Camera::getUpVector() const
 	return m_up;
 }
 
+std::vector<glm::vec3> Camera::getWorldBasis()
+{
+	glm::vec3 up = m_up;
+	if (std::fabs(glm::dot(up, m_direction)) > 0.999f)
+	{
+		up = glm::vec3(0, 0, 1);
+	}
+
+	glm::vec3 basisUp = glm::normalize(up - (glm::dot(m_direction, up) * up));
+
+	return {m_direction, basisUp, glm::cross(basisUp, m_direction)};
+
+}
+
+std::vector<glm::vec3> Camera::getFrustumCorners(const glm::vec3& pos,	const glm::vec3& zBasis,
+						float near, float far, float fovy, float aspect)
+{
+	std::vector<glm::vec3> out{};
+	out.reserve(8);
+
+	glm::vec3 basis_x;
+	glm::vec3 basis_y;
+	glm::vec3 basis_z;
+
+	glm::vec3 up = glm::vec3{0.0f, 1.0f, 0.0f};
+
+	if (std::fabs(glm::dot(up, zBasis)) > 0.999f)
+	{
+		up = {0.0f, 0.0f, 1.0f};
+	}
+
+	basis_y = glm::normalize(up - (glm::dot(up, zBasis) * zBasis));
+	basis_x = glm::cross(up, zBasis);
+	basis_z = zBasis;
+
+	glm::vec3 nearCenter = basis_z * near;
+	glm::vec3 farCenter =  basis_z * far;
+
+	float e = tanf(fovy * 0.5f);
+	float yNearExt = e * near;
+	float xNearExt = yNearExt * aspect;
+
+	float yFarExt = e * far;
+	float xFarExt = yFarExt * aspect;
+
+	out.emplace_back((nearCenter - basis_x * xNearExt - basis_y * yNearExt) + pos);
+	out.emplace_back((nearCenter - basis_x * xNearExt + basis_y * yNearExt) + pos);
+	out.emplace_back((nearCenter + basis_x * xNearExt + basis_y * yNearExt) + pos);
+	out.emplace_back((nearCenter + basis_x * xNearExt - basis_y * yNearExt) + pos);
+
+	out.emplace_back((farCenter  - basis_x * xFarExt  - basis_y * yFarExt) + pos);
+	out.emplace_back((farCenter  - basis_x * xFarExt	 + basis_y * yFarExt) + pos);
+	out.emplace_back((farCenter  + basis_x * xFarExt  + basis_y * yFarExt) + pos);
+	out.emplace_back((farCenter  + basis_x * xFarExt  - basis_y * yFarExt) + pos);
+
+	return out;
+}
+
 void Camera::processKeyboardInput(GLFWwindow* window, float deltaTime)
 {
 	float speed = m_speed;

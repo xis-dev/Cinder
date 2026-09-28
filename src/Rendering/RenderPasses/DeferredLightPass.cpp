@@ -2,19 +2,23 @@
 // Created by PC on 26-Jul-26.
 //
 
-#include "../../../includes/Rendering/Techniques/DeferredLightPass.h"
+#include "../../../includes/Rendering/RenderPasses/DeferredLightPass.h"
 
 #include "Camera.h"
 #include "GBuffer.h"
 #include "Quad.h"
 
 
-DeferredLightPass::DeferredLightPass(int w, int h, Shader *shader): m_shader(shader)
+DeferredLightPass::DeferredLightPass(int w, int h, Shader *shader) : m_shader(shader)
 {
     unsigned colour = Texture::createEmptyTex(w, h, GL_RGBA16F, GL_RGBA, GL_FLOAT);
     unsigned depthStencil = Texture::createEmptyRenderbuffer(w, h, GL_DEPTH24_STENCIL8);
     buffer = FrameBuffer(std::vector<unsigned>{colour});
     buffer.attachDepthBuffer(depthStencil, false, GL_DEPTH_STENCIL_ATTACHMENT);
+
+    buffer.attachColourBuffer(Texture::createEmptyTex(1024, 1024, GL_RGBA16F, GL_RGBA, GL_FLOAT), true);
+    buffer.attachColourBuffer(Texture::createEmptyTex(1024, 1024, GL_RGBA16F, GL_RGBA, GL_FLOAT), true);
+
     enable();
 }
 
@@ -29,8 +33,18 @@ void DeferredLightPass::updatePassSize(int w, int h)
     buffer.updateDepthBuffer(w, h, GL_DEPTH_STENCIL_ATTACHMENT, GL_UNSIGNED_INT_24_8, GL_DEPTH24_STENCIL8, false);
 }
 
+void DeferredLightPass::imguiRender()
+{
+    if (ImGui::TreeNode("Light Pass"))
+    {
+        ImGui::Checkbox("Use Blinn-Phong", &useBlinn);
+        ImGui::TreePop();
+    }
+}
+
 void DeferredLightPass::configuredRender(const FrameContext &ctx, const SSAORenderPass &ssaoPass,
-                                         unsigned shadowMapBuffer, Scene *scene, const Camera &cam)
+                                         unsigned shadowMapBuffer, Scene *scene, const Camera &cam,
+                                         const DirectionalShadowPass& shadowPass)
 {
     if (!scene || !ctx.gBuffer)
     {
@@ -38,6 +52,7 @@ void DeferredLightPass::configuredRender(const FrameContext &ctx, const SSAORend
         return;
     }
     glBindFramebuffer(GL_FRAMEBUFFER, buffer.getFrameBuffer());
+    glViewport(0, 0, ctx.frameWidth, ctx.frameHeight);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glDisable(GL_CULL_FACE);
@@ -46,7 +61,6 @@ void DeferredLightPass::configuredRender(const FrameContext &ctx, const SSAORend
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, ctx.gBuffer->gDepth);
     m_shader->setUniformi("u_GDepth", 0);
-
 
 
     glActiveTexture(GL_TEXTURE1);
@@ -72,7 +86,7 @@ void DeferredLightPass::configuredRender(const FrameContext &ctx, const SSAORend
 
 
     glActiveTexture(GL_TEXTURE5);
-    glBindTexture(GL_TEXTURE_2D, shadowMapBuffer);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, shadowPass.getOutput(0));
     m_shader->setUniformi("u_ShadowMap", 5);
 
     int pointMapStartIdx = 6;
@@ -82,14 +96,17 @@ void DeferredLightPass::configuredRender(const FrameContext &ctx, const SSAORend
         glActiveTexture(GL_TEXTURE0 + pointMapStartIdx + loopIdx);
         glBindTexture(GL_TEXTURE_CUBE_MAP, shadowCubemap);
         m_shader->setUniformi(("t_PointMaps[" + std::to_string(loopIdx) + "]").c_str(),
-                                     pointMapStartIdx + loopIdx);
+                              pointMapStartIdx + loopIdx);
         ++loopIdx;
     }
 
     scene->illuminate(*m_shader);
-    for (const auto &projView: scene->dirLightTransforms)
+
+    m_shader->setUniformMat4("m_LightSpace", shadowPass.lightTransform);
+    m_shader->setUniformi("u_CascadeMapCount", shadowPass.numberOfSplits);
+    for (int i = 0; i < shadowPass.numberOfSplits; ++i)
     {
-        m_shader->setUniformMat4("m_LightSpace", projView);
+        m_shader->setUniformf(shadowPass.cascadeUniformStrings[i].c_str(), shadowPass.m_cascadeSplits[i]);
     }
 
     m_shader->setUniformVec3("u_CameraPosition", cam.getPosition());
@@ -103,5 +120,3 @@ void DeferredLightPass::configuredRender(const FrameContext &ctx, const SSAORend
 
     Quad::draw();
 }
-
-

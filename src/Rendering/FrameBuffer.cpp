@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <iterator>
+#include <algorithm>
 
 #include "Texture.h"
 
@@ -26,8 +27,16 @@ FrameBuffer::FrameBuffer(const std::vector<unsigned>& colourAttachments)
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    glDrawBuffers(drawBuffers.size(), drawBuffers.data());
 
+    if (drawBuffers.empty())
+    {
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+    }
+    else
+    {
+        glDrawBuffers(drawBuffers.size(), drawBuffers.data());
+    }
         std::cerr << "RENDER_PASS:: framebuffer status: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << "\n" ;
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -41,9 +50,12 @@ void FrameBuffer::attachColourBuffer(unsigned buffer, bool isTexture)
 {
     if (m_colourBuffers.size() > GL_MAX_COLOR_ATTACHMENTS) return ;
 
+    m_colourBuffers.push_back(buffer);
+
     GLint nextAttachment = !m_colourBuffers.empty() ? GL_COLOR_ATTACHMENT0 + (m_colourBuffers.size() - 1) : GL_COLOR_ATTACHMENT0;
     std::vector<GLenum> drawBuffers;
     drawBuffers.push_back(GL_COLOR_ATTACHMENT0);
+
 
     for (int i = 1; i < m_colourBuffers.size(); ++i)
     {
@@ -69,6 +81,7 @@ void FrameBuffer::attachColourBuffer(unsigned buffer, bool isTexture)
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
 
 }

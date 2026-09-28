@@ -2,7 +2,7 @@
 // Created by PC on 24-Jul-26.
 //
 
-#include "../../includes/Rendering/Techniques/SSAORenderPass.h"
+#include "../../../includes/Rendering/RenderPasses/SSAORenderPass.h"
 
 #include <iostream>
 #include <random>
@@ -16,7 +16,7 @@
 #include "glm/mat4x4.hpp"
 
 SSAORenderPass::SSAORenderPass(Shader* s_default, Shader* s_blur,int w, int h):
-                                m_defaultShader(s_default), m_blurShader(s_blur), m_width(w), m_height(h)
+                                m_defaultShader(s_default), m_blurShader(s_blur)
 {
     unsigned ssaoColour = Texture::createEmptyTex(w, h, GL_RED, GL_RED, GL_FLOAT);
     unsigned blurColour = Texture::createEmptyTex(w, h, GL_RED, GL_RED, GL_FLOAT);
@@ -47,9 +47,6 @@ SSAORenderPass::SSAORenderPass(Shader* s_default, Shader* s_blur,int w, int h):
 
 void SSAORenderPass::updatePassSize(int w, int h)
 {
-    m_width = w;
-    m_height = h;
-
     m_fbo.updateColourBuffer(0, w, h, GL_RED, GL_FLOAT);
     m_blurFBO.updateColourBuffer(0, w, h, GL_RED, GL_FLOAT);
 
@@ -64,10 +61,13 @@ unsigned SSAORenderPass::getOutput(int index) const
 
 void SSAORenderPass::imguiRender()
 {
-    ImGui::Text("SSAO Settings:");
-    IRenderPassConfigurer::imguiRender();
-    ImGui::DragFloat("SSAO Strength", &strength, 0.1f);
-    ImGui::DragFloat("Sample Radius", &sampleRadius, 0.1f);
+    if (ImGui::TreeNode("SSAO"))
+    {
+        IRenderPassConfigurer::imguiRender();
+        ImGui::DragFloat("SSAO Strength", &strength, 0.1f);
+        ImGui::DragFloat("Sample Radius", &sampleRadius, 0.1f);
+        ImGui::TreePop();
+    }
 }
 
 std::vector<glm::vec3> SSAORenderPass::generateSampleKernel(int samples)
@@ -126,7 +126,7 @@ void SSAORenderPass::configuredRender(const FrameContext &context)
         return;
     }
 
-    glViewport(0, 0, m_width, m_height);
+    glViewport(0, 0, context.frameWidth, context.frameHeight);
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo.getFrameBuffer());
 
     glDisable(GL_CULL_FACE);
@@ -153,7 +153,7 @@ void SSAORenderPass::configuredRender(const FrameContext &context)
     m_defaultShader->setUniformMat4("m_Projection", context.projectionMatrix);
     m_defaultShader->setUniformMat4("m_InvProjection", context.invProjectionMatrix);
 
-    m_defaultShader->setUniformVec2("u_WindowSize", glm::vec2(m_width, m_height));
+    m_defaultShader->setUniformVec2("u_WindowSize", glm::vec2(context.frameWidth, context.frameHeight));
     m_defaultShader->setUniformVec2("u_NoiseSize", glm::vec2(4.0f));
 
     m_defaultShader->setUniformf("u_SampleRadius", sampleRadius);

@@ -2,6 +2,8 @@
 
 #include "glad/glad.h"
 #include <vector>
+
+// TODO: Default data in updat buffers
 class FrameBuffer
 {
 public:

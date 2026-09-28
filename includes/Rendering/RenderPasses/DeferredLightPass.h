@@ -3,9 +3,10 @@
 #include "RenderPass.h"
 #include "Scene.h"
 #include "SSAORenderPass.h"
+#include "src/Rendering/RenderPasses/DirectionalShadowPass.h"
 
 class DeferredLightPass: public IRenderPassConfigurer<const SSAORenderPass&, unsigned,
-                                                    Scene*, const Camera&>
+                                                    Scene*, const Camera&, const DirectionalShadowPass&>
 {
 private:
     Shader* m_shader{nullptr};
@@ -20,9 +21,11 @@ public:
 
     void updatePassSize(int w, int h) override;
 
+    void imguiRender() override;
+
 protected:
     virtual void configuredRender(const FrameContext &ctx, const SSAORenderPass& ssaoPass, unsigned shadowMapBuffer,
-                                  Scene* scene, const Camera& cam) override;
+                                  Scene* scene, const Camera& cam, const DirectionalShadowPass& shadowPass) override;
 };
 
 

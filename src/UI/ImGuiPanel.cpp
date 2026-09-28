@@ -176,12 +176,14 @@ void RenderPanel::update()
         viewW = viewH * m_aspect;
     }
 
-    viewW = std::max(viewW, static_cast<float>(m_minWidth));
-    viewH = std::max(viewH, static_cast<float>(m_minHeight));
+    viewW = (int)std::max(viewW, static_cast<float>(m_minWidth));
+    viewH = (int)std::max(viewH, static_cast<float>(m_minHeight));
 
-    if (viewW != previousWidth || viewH != previousHeight)
+    if ((int)viewW != previousWidth || (int)viewH != previousHeight)
     {
         RENDERER->changeViewportSize(viewW, viewH);
+        previousWidth = viewW;
+        previousHeight = viewH;
     }
     ImVec2 cursorPosOffset = ImVec2(viewportSize.x - viewW, viewportSize.y - viewH) * 0.5;
     ImGui::SetCursorPos(ImGui::GetCursorPos() + cursorPosOffset);
@@ -194,17 +196,8 @@ void RenderConfigPanel::update()
     // ImGui::DragFloat("Camera Speed", &camera.m_speed, 1.0f);
     // ImGui::DragFloat("Camera Far Plane", &camera.m_farPlane, 0.1f);
     // ImGui::DragFloat("Camera Near Plane", &camera.m_nearPlane, 0.01f);
-    ImGui::DragFloat("Gamma Correction exp", &RENDERER->gamma, 0.1f);
-    ImGui::DragFloat("Parallax Map Height", &RENDERER->parallaxScale, 0.1f);
-    ImGui::DragFloat("HDR Exposure", &RENDERER->hdrExposure, 0.1f);
-    ImGui::Checkbox("SSAO", &RENDERER->useSSAO);
-    ImGui::Checkbox("Grid", &RENDERER->drawGrid);
-    ImGui::Checkbox("HDR", &RENDERER->hdr);
-    ImGui::Checkbox("Bloom", &RENDERER->bloom);
-    RENDERER->m_SSAOPass.imguiRender();
-    ImGui::Checkbox("Draw Cubemap", &RENDERER->cubeMapEnabled);
-    ImGui::Checkbox("Enable Backface Culling", &RENDERER->cullBackface);
-    ImGui::Checkbox("Draw Wireframe", &RENDERER->drawWireframe);
+
+    RENDERER->imguiRender();
     std::string deltaTimeText = "Delta Time: " + std::to_string(static_cast<int>(std::floor(float(1000 / (1 / Engine::get()->getDeltaTime()))))) + " ms/s";
     std::string frameRateText = "FPS: " + std::to_string(static_cast<int>(std::floor((float(1 / Engine::get()->getDeltaTime())))));
     ImGui::Text(deltaTimeText.c_str());

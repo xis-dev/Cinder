@@ -18,7 +18,9 @@ struct PointLight{
     float radius;
 };
 
-out vec4 FragColor;
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 Shadow_1;
+layout (location = 2) out vec4 Shadow_2;
 
 in vec2 v_UV;
 
@@ -29,6 +31,10 @@ const float kPI = 3.14159265;
 #define MAX_SPOT_LIGHTS 1
 #define MAX_DIR_LIGHTS 1
 
+#define MAX_CASCADE_MAPS 4
+
+uniform int u_CascadeMapCount;
+uniform float u_CascadeDistances[MAX_CASCADE_MAPS];
 
 uniform int u_DirLightCount;
 uniform int u_PointLightCount;
@@ -54,7 +60,7 @@ uniform bool u_SSAOActive;
 uniform float u_NearPlane;
 uniform float u_FarPlane;
 
-uniform sampler2D u_ShadowMap;
+uniform sampler2DArrayShadow u_ShadowMap;
 uniform samplerCube[MAX_POINT_LIGHTS] t_PointMaps;
 
 vec3 sampleOffsetDirections[20] = vec3[]
@@ -68,6 +74,7 @@ vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
 
 vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex);
 vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex, samplerCube shadowMap);
+
 
 
 vec3 projectedDepthToWorld(vec2 texCoord, float depth) {
@@ -97,12 +104,22 @@ float linearizeDepth(float depth) {
 vec4 lightSpacePos;
 vec3 worldPos;
 
+int numberOfCascadeMaps;
+
 
 void main(){
 
     int numberOfDirLights = clamp(u_DirLightCount, 0, MAX_DIR_LIGHTS);
     int numberOfPointLights = clamp(u_PointLightCount, 0, MAX_POINT_LIGHTS);
 
+        numberOfCascadeMaps = clamp(u_CascadeMapCount, 0, MAX_CASCADE_MAPS);
+
+   // Shadow_1 = vec4(vec3(linearizeDepth(texture(u_ShadowMap, vec3(v_UV, 0.)).r) / u_FarPlane), 1.0);
+    // Shadow_2 = vec4(vec3(linearizeDepth(texture(u_ShadowMap, vec3(v_UV, 1.)).r) / u_FarPlane), 1.0);
+
+    //FragColor = vec4(1.0);
+
+    //return;
     worldPos = projectedDepthToWorld(v_UV, texture(u_GDepth, v_UV).r);
 
 
@@ -138,28 +155,51 @@ void main(){
 }
 
 float dirShadowCalc(vec4 lightSpacePos, float bias) {
-    vec3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
-    projCoords = projCoords * 0.5 + 0.5;
 
-    float closestDepth = texture(u_ShadowMap, projCoords.xy).r;
 
-    float currentDepth = projCoords.z;
-
-    float shadow = 0.0;
-    vec2 texelSize = (1.0 / textureSize(u_ShadowMap, 0)).rg;
-    for(int x = -1; x <= 1; ++x)
-    {
-        for(int y = -1; y <= 1; ++y)
-        {
-            float pcfDepth = texture(u_ShadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
-            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+    int index = 0;
+    float depth = linearizeDepth(texture(u_GDepth, v_UV).r);
+    for (int i = 0; i < numberOfCascadeMaps; i++) {
+        if (depth <= u_CascadeDistances[i]) {
+            index = i;
+            break;
         }
     }
-    shadow /= 9.0;
 
-    if(projCoords.z > 1.0) shadow = 0.0;
+    vec4 projCoords = lightSpacePos;
 
-    return shadow;
+    // w should be 1 in ortho projection anyways so shouldnt matter
+//    projCoords.xyz /= projCoords.w;
+    // Not sure if remapping is needed
+    projCoords = projCoords * 0.5 + 0.5;
+    projCoords.w = projCoords.z;
+    projCoords.w -= bias;
+    projCoords.z = float(index);
+
+    float visibility = texture(u_ShadowMap, projCoords);
+
+    //float visibility = 1.0;
+
+
+//    float closestDepth = texture(u_ShadowMap, projCoords.xy).r;
+//
+//    float currentDepth = projCoords.z;
+//
+//    float shadow = 0.0;
+//    vec2 texelSize = (1.0 / textureSize(u_ShadowMap, 0)).rg;
+//    for(int x = -1; x <= 1; ++x)
+//    {
+//        for(int y = -1; y <= 1; ++y)
+//        {
+//            float pcfDepth = texture(u_ShadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+//            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+//        }
+//    }
+//    shadow /= 9.0;
+//
+//    if(projCoords.z > 1.0) shadow = 0.0;
+
+    return visibility;
 }
 
 vec3 calcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex) {

@@ -8,35 +8,17 @@
 
 
 #include "Camera.h"
-#include "Cube.h"
 #include "Entity.h"
-#include "Material.h"
-#include "Mesh.h"
-#include "Texture.h"
-#include "Math/Vec3.h"
 
-#include "Primitives/Plane.h"
 #include "Utilities/IconRegistry.h"
 #include "Rendering/Scene.h"
 
 #include "Renderer.h"
-#include "Resources/ResourceManager.h"
-#include "Utilities/FileManager.h"
 #include "Utilities/AssetManager.h"
 
 #include "ModelLoader.h"
 #include "Resources/Handle.h"
 
-#include "assimp/Importer.hpp"
-#include "assimp/scene.h"
-#include "assimp/postprocess.h"
-
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-
-#include <iostream>
-#include <fstream>
 #include <map>
 #include <memory>
 
@@ -91,7 +73,7 @@ private:
 	static std::unique_ptr<FileLoader> m_FileLoader;
 
 	std::map<float, MeshEntity*> transparentObj{};
-	Camera camera = Camera( glm::vec3(0.0f, 10.0f, -30.0f),glm::vec3(0.0f, 0.0f, 1.0f), 45.0f, static_cast<float>(scrWidth) /(scrHeight), 50.0f, 0.1, 10000);
+	Camera camera = Camera( glm::vec3(0.0f, 10.0f, -30.0f),glm::vec3(0.0f, 0.0f, 1.0f), 45.0f, static_cast<float>(scrWidth) /(scrHeight), 50.0f, 0.1, 2000.0f);
 
 
 	 void init(GLFWwindow*& window);

@@ -13,8 +13,11 @@
 #include "GLFW/glfw3.h"
 
 
+#include "imgui.h"
+
 #include "gtc/type_ptr.hpp"
 #include "gtx/norm.hpp"
+#include "RenderPasses/BloomPass.h"
 
 void Renderer::init(GLFWwindow *win, AssetManager *manager, Scene *scene, int width, int height)
 {
@@ -23,8 +26,8 @@ void Renderer::init(GLFWwindow *win, AssetManager *manager, Scene *scene, int wi
     ASSET_MANAGER = manager;
     CURRENT_SCENE = scene;
 
-    renderWidth = width;
-    renderHeight = height;
+    m_renderWidth = width;
+    m_renderHeight = height;
 
     glCullFace(GL_BACK);
 
@@ -40,25 +43,18 @@ void Renderer::init(GLFWwindow *win, AssetManager *manager, Scene *scene, int wi
     pointShadowFBO = createCubemapShadowFBO(pointShadowTex);
 
 
-    glGenFramebuffers(2, pingPongFBOs);
-    glGenTextures(2, pingPongColorBuffers);
-    createPingPongFBOs();
-    hdrColorTexs[0] = Texture::createEmptyTex(width, height, GL_RGBA16F, GL_RGBA);
-
-    // hdrColorTexs[1] = Texture::createEmptyTex(width, height, GL_RGBA16F, GL_RGBA);
-    hdrDepthStencil = Texture::createEmptyTex(width, height, GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL,
-                                              GL_UNSIGNED_INT_24_8);
-    hdrFBO = createFBO(hdrColorTexs, 1);
-
-
-
-    bloomColor = Texture::createEmptyTex(width, height, GL_RGBA16F, GL_RGBA, GL_FLOAT);
-    bloomFBO = createFBO(&bloomColor, 1);
-
-
     m_GBuffer.setup(width, height);
     m_SSAOPass = SSAORenderPass(ASSET_MANAGER->shaders.get("ssaoShader"), ASSET_MANAGER->shaders.get("ssaoBlur"), width, height);
     m_LightPass = DeferredLightPass(width, height,ASSET_MANAGER->shaders.get("deferredLightPass"));
+    m_BloomPass = BloomPass(width, height, ASSET_MANAGER->shaders.get("bloom"), ASSET_MANAGER->shaders.get("bloomBlur"));
+    m_HDRPass = HDRPass(width, height, ASSET_MANAGER->shaders.get("HDR"));
+    m_DirShadowPass = DirectionalShadowPass(width, height, ASSET_MANAGER->shaders.get("shadowMap"));
+
+    m_renderPasses.push_back(&m_SSAOPass);
+    m_renderPasses.push_back(&m_LightPass);
+    m_renderPasses.push_back(&m_BloomPass);
+    m_renderPasses.push_back(&m_HDRPass);
+    m_renderPasses.push_back(&m_DirShadowPass);
 
     for (int i = 0; i < 6; ++i) shadowMatNames[i] = "u_ShadowMatrices[" + std::to_string(i) + "]";
 
@@ -67,50 +63,34 @@ void Renderer::init(GLFWwindow *win, AssetManager *manager, Scene *scene, int wi
 
 void Renderer::changeViewportSize(int w, int h)
 {
-    renderWidth = w;
-    renderHeight = h;
+    m_renderWidth = w;
+    m_renderHeight = h;
 
     updateRenderComponents(w, h);
-    createPingPongFBOs();
+}
+
+void Renderer::imguiRender()
+{
+    for (auto* pass: m_renderPasses)
+    {
+        pass->imguiRender();
+    }
+    ImGui::DragFloat("Gamma", &gamma);
+	ImGui::Checkbox("Grid", &drawGrid);
+    ImGui::Checkbox("Draw CubeMap", &cubeMapEnabled);
+    ImGui::Checkbox("Enable Backface Culling", &cullBackface);
+    ImGui::Checkbox("Draw Wireframe", &drawWireframe);
 }
 
 
 void Renderer::updateRenderComponents(int w, int h)
 {
     m_GBuffer.update(w, h);
-    // TODO: Wrap into holding render passes and call in loop
-    m_SSAOPass.updatePassSize(w, h);
-    m_LightPass.updatePassSize(w, h);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    for (auto* pass: m_renderPasses)
     {
-        std::cout << "Incomplete deferred Framebuffer. \n";
+        pass->updatePassSize(w, h);
     }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
-
-    glBindTexture(GL_TEXTURE_2D, hdrColorTexs[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, hdrColorTexs[0], 0);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    {
-        std::cout << "Incomplete hdr Framebuffer. \n";
-    }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, bloomFBO);
-
-    glBindTexture(GL_TEXTURE_2D, bloomColor);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, int(w * 0.5), int(h * 0.5), 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bloomColor, 0);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    {
-        std::cout << "Incomplete bloom Framebuffer. \n";
-    }
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 
@@ -173,25 +153,6 @@ unsigned Renderer::createFBO(unsigned *colorTexts, int colorTexCount, unsigned d
     return id;
 }
 
-void Renderer::createPingPongFBOs()
-{
-    for (int i = 0; i < 2; ++i)
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, pingPongFBOs[i]);
-        glBindTexture(GL_TEXTURE_2D, pingPongColorBuffers[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, renderWidth * 0.5, renderHeight * 0.5, 0, GL_RGBA, GL_FLOAT,
-                     nullptr);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingPongColorBuffers[i], 0);
-    }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
 
 
 unsigned Renderer::create2DShadowFBO(unsigned depthTex)
@@ -246,7 +207,6 @@ void Renderer::setupPointMatrices(PointLight *light, const int w, const int h)
     float aspect = (float) w / (float) h;
     float near = 1.0f;
     float far = 25.0f;
-    farPlane = far;
     glm::mat4 shadow_proj = glm::perspective(glm::radians(90.0f), aspect, near, far);
 
     glm::vec3 lightPos = light->getWorldPosition();
@@ -268,11 +228,6 @@ void Renderer::renderScene(const Camera &cam, unsigned fboToRenderTo, const int 
 {
     // Disable blending for deferred
 
-    glDisable(GL_BLEND);
-    glBindFramebuffer(GL_FRAMEBUFFER, fboToRenderTo);
-    glViewport(0, 0, sceneW, sceneH);
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glm::vec3 camPosition = cam.getPosition();
     glm::mat4 projectionMat = cam.getProjectionMatrix();
@@ -283,11 +238,24 @@ void Renderer::renderScene(const Camera &cam, unsigned fboToRenderTo, const int 
 
     FrameContext currentFrameContext{};
     currentFrameContext.gBuffer = &m_GBuffer;
+    currentFrameContext.frameWidth = m_renderWidth;
+    currentFrameContext.frameHeight = m_renderHeight;
     currentFrameContext.viewMatrix = viewMat;
     currentFrameContext.invViewMatrix = invView;
     currentFrameContext.projectionMatrix = projectionMat;
     currentFrameContext.invProjectionMatrix = invProjection;
 
+    // Render directional shadow map
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
+    m_DirShadowPass.tryConfiguredRender(currentFrameContext, cam, CURRENT_SCENE);
+
+
+    glDisable(GL_BLEND);
+    glBindFramebuffer(GL_FRAMEBUFFER, fboToRenderTo);
+    glViewport(0, 0, sceneW, sceneH);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     for (Shader *shader: CURRENT_SCENE->m_renderBatches | std::views::keys)
     {
         shader->use();
@@ -382,13 +350,10 @@ void Renderer::renderScene(const Camera &cam, unsigned fboToRenderTo, const int 
     }
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    if (useSSAO)
-    {
-        m_SSAOPass.tryConfiguredRender(currentFrameContext);
-    }
 
-    m_LightPass.tryConfiguredRender(currentFrameContext, m_SSAOPass, shadowTex, CURRENT_SCENE, cam);
-
+    m_SSAOPass.tryConfiguredRender(currentFrameContext);
+    m_LightPass.tryConfiguredRender(currentFrameContext, m_SSAOPass, m_DirShadowPass.getOutput(0), CURRENT_SCENE, cam, m_DirShadowPass
+        );
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
@@ -409,6 +374,7 @@ void Renderer::renderScene(const Camera &cam, unsigned fboToRenderTo, const int 
         glDepthFunc(GL_LESS);
     }
 
+    glDisable(GL_CULL_FACE);
     // Draw floor grid
     if (drawGrid)
     {
@@ -423,7 +389,6 @@ void Renderer::renderScene(const Camera &cam, unsigned fboToRenderTo, const int 
         }
     }
 
-    glEnable(GL_CULL_FACE);
     glDepthFunc(GL_ALWAYS);
 
     // Render entity icons(if they exist)
@@ -459,95 +424,8 @@ void Renderer::renderScene(const Camera &cam, unsigned fboToRenderTo, const int 
     }
 
     glDisable(GL_CULL_FACE);
-
-    if (bloom)
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, bloomFBO);
-        glViewport(0, 0, renderWidth * 0.5, renderHeight * 0.5);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, m_LightPass.getOutput(0));
-
-        auto *bloomShader = ASSET_MANAGER->shaders.get("bloom");
-        bloomShader->use();
-
-        bloomShader->setUniformi("t_BloomTexture", 0);
-        bloomShader->setUniformVec2("u_OriginalTexelSize", glm::vec2(1.0 / renderWidth, 1.0 / renderHeight));
-
-        Quad::draw();
-
-        glBindFramebuffer(GL_FRAMEBUFFER, pingPongFBOs[0]);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, bloomColor);
-
-        auto *bloomBlurShader = ASSET_MANAGER->shaders.get("bloomBlur");
-        bloomBlurShader->use();
-
-        bloomBlurShader->setUniformi("t_TextureToBlur", 0);
-        bloomBlurShader->setUniformVec2("u_TexelSize", glm::vec2(1. / (renderWidth * 0.5), 1. / (renderHeight * 0.5)));
-        bloomBlurShader->setUniformi("horizontal", true);
-
-        Quad::draw();
-
-        glBindFramebuffer(GL_FRAMEBUFFER, pingPongFBOs[1]);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, pingPongColorBuffers[0]);
-
-        bloomBlurShader->setUniformi("t_TextureToBlur", 0);
-        bloomBlurShader->setUniformi("horizontal", false);
-
-        Quad::draw();
-
-        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
-        glViewport(0, 0, renderWidth, renderHeight);
-        glClearColor(0.0, 0.0, 0.0, 1.0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, m_LightPass.getOutput(0));
-
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, pingPongColorBuffers[1]);
-
-        auto *hdrShader = ASSET_MANAGER->shaders.get("HDR");
-        hdrShader->use();
-        hdrShader->setUniformi("u_HDRTexture", 0);
-        hdrShader->setUniformi("u_BloomTexture", 1);
-        hdrShader->setUniformVec2("u_DownsampledTexelSize",
-                                  glm::vec2(1. / (renderWidth * 0.5), 1. / (renderHeight * 0.5)));
-        hdrShader->setUniformf("u_HDRExposure", hdrExposure);
-        hdrShader->setUniformf("u_Gamma", gamma);
-
-        Quad::draw();
-    } else
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
-        glViewport(0, 0, renderWidth, renderHeight);
-        glClearColor(0.0, 0.0, 0.0, 1.0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, m_LightPass.getOutput(0));
-
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, m_LightPass.getOutput(0));
-
-        auto *hdrShader = ASSET_MANAGER->shaders.get("HDR");
-        hdrShader->use();
-        hdrShader->setUniformi("u_HDRTexture", 0);
-        hdrShader->setUniformi("u_BloomTexture", 1);
-        hdrShader->setUniformVec2("u_DownsampledTexelSize",
-                                  glm::vec2(1. / (renderWidth * 0.5), 1. / (renderHeight * 0.5)));
-        hdrShader->setUniformf("u_HDRExposure", hdrExposure);
-        hdrShader->setUniformf("u_Gamma", gamma);
-
-        Quad::draw();
-    }
-
+    m_BloomPass.tryConfiguredRender(currentFrameContext, m_LightPass.getOutput(0));
+    m_HDRPass.tryConfiguredRender(currentFrameContext, m_LightPass.getOutput(0),  gamma, m_BloomPass);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glEnable(GL_CULL_FACE);
@@ -555,28 +433,28 @@ void Renderer::renderScene(const Camera &cam, unsigned fboToRenderTo, const int 
 
 void Renderer::renderShadowMap()
 {
-    glViewport(0, 0, 1920, 1080);
-    glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
-    glClear(GL_DEPTH_BUFFER_BIT);
-
-    auto *shadowMapShader = ASSET_MANAGER->shaders.get("shadowMap");
-    if (shadowMapShader)
-    {
-        shadowMapShader->use();
-        for (const auto &projView: CURRENT_SCENE->dirLightTransforms)
-        {
-            shadowMapShader->setUniformMat4("u_LightProjView", projView);
-        }
-    }
-
-    for (const auto &entity: CURRENT_SCENE->m_meshEnts)
-    {
-        for (auto &modelSet: entity->getModel()->getMeshes())
-        {
-            shadowMapShader->setUniformMat4("u_Model", entity->getGlobalTransformMatrix());
-            modelSet.mesh.draw();
-        }
-    }
+    // glViewport(0, 0, 1920, 1080);
+    // glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+    // glClear(GL_DEPTH_BUFFER_BIT);
+    //
+    // auto *shadowMapShader = ASSET_MANAGER->shaders.get("shadowMap");
+    // if (shadowMapShader)
+    // {
+    //     shadowMapShader->use();
+    //     for (const auto &projView: CURRENT_SCENE->dirLightTransforms)
+    //     {
+    //         shadowMapShader->setUniformMat4("u_LightProjView", projView);
+    //     }
+    // }
+    //
+    // for (const auto &entity: CURRENT_SCENE->m_meshEnts)
+    // {
+    //     for (auto &modelSet: entity->getModel()->getMeshes())
+    //     {
+    //         shadowMapShader->setUniformMat4("u_Model", entity->getGlobalTransformMatrix());
+    //         modelSet.mesh.draw();
+    //     }
+    // }
 }
 
 void Renderer::renderPointMap(Scene *currentScene)
@@ -613,7 +491,7 @@ void Renderer::renderPointMap(Scene *currentScene)
 
 unsigned Renderer::getFinalSceneTexture()
 {
-    return hdrColorTexs[0];
+    return m_HDRPass.isEnabled() ? m_HDRPass.getOutput(0) : m_LightPass.getOutput(0);
 }
 
 
@@ -640,15 +518,10 @@ void Renderer::render(const Camera &cam)
 
     glCullFace(GL_FRONT);
 
-
-    renderShadowMap();
-
-
+    //renderShadowMap();
 
     glViewport(0, 0, 2048, 2048);
     renderPointMap(CURRENT_SCENE);
-
-
 
     glCullFace(GL_BACK);
     if (cullBackface)
@@ -659,5 +532,5 @@ void Renderer::render(const Camera &cam)
         glDisable(GL_CULL_FACE);
     }
 
-    renderScene(cam, m_GBuffer.frameBufferHolder.getFrameBuffer(), renderWidth, renderHeight);
+    renderScene(cam, m_GBuffer.frameBufferHolder.getFrameBuffer(), m_renderWidth, m_renderHeight);
 }

@@ -10,39 +10,36 @@
 #include <string>
 
 #include "GBuffer.h"
-#include "Techniques/DeferredLightPass.h"
-#include "Techniques/SSAORenderPass.h"
+#include "RenderPasses/DeferredLightPass.h"
+#include "RenderPasses/SSAORenderPass.h"
+#include "src/Rendering/RenderPasses/BloomPass.h"
+#include "src/Rendering/RenderPasses/DirectionalShadowPass.h"
+#include "src/Rendering/RenderPasses/HDRPass.h"
 
+class BloomPass;
 struct AssetManager;
 class Camera;
 class Texture;
 class PointLight;
 
 class Renderer
-{   
-
-
+{
 public:
     Renderer() = default;
     GLFWwindow* WINDOW;
     AssetManager* ASSET_MANAGER;
     Scene* CURRENT_SCENE;
     std::vector<std::string> textures_faces{
-    "assets/Textures/skybox/right.jpg",
-    "assets/Textures/skybox/left.jpg",
-    "assets/Textures/skybox/top.jpg",
-    "assets/Textures/skybox/bottom.jpg",
-    "assets/Textures/skybox/front.jpg",
-    "assets/Textures/skybox/back.jpg"
-    };
+        "assets/Textures/skybox/right.jpg",
+        "assets/Textures/skybox/left.jpg",
+        "assets/Textures/skybox/top.jpg",
+        "assets/Textures/skybox/bottom.jpg",
+        "assets/Textures/skybox/front.jpg",
+        "assets/Textures/skybox/back.jpg"
+        };
     std::string shadowMatNames[6];
     unsigned cubeMapTex;
 
-    unsigned hdrFBO, hdrDepthStencil;
-    unsigned bloomFBO, bloomColor;
-    unsigned hdrColorTexs[2];
-    unsigned pingPongFBOs[2];
-    unsigned pingPongColorBuffers[2];
     unsigned skyBoxVAO, skyBoxVBO, skyBoxEBO;
     unsigned shadowFBO, shadowTex;
     unsigned pointShadowFBO, pointShadowTex;
@@ -50,32 +47,28 @@ public:
     GBuffer m_GBuffer;
     SSAORenderPass m_SSAOPass;
     DeferredLightPass m_LightPass;
+    BloomPass m_BloomPass;
+    HDRPass m_HDRPass;
+    DirectionalShadowPass m_DirShadowPass;
 
-    int renderWidth{};
-    int renderHeight{};
+    std::vector<RenderPass*> m_renderPasses{};
 
-    float farPlane{};
+    int m_renderWidth{};
+    int m_renderHeight{};
 
+    float gamma{2.2f};
     bool drawWireframe{};
     bool cullBackface{true};
-    bool blinnLighting{true};
     bool cubeMapEnabled{ true };
     bool drawGrid{ true };
-    bool hdr{ true };
-    bool fbo1{};
 
     std::vector<glm::mat4> shadowTransforms{};
 
-    float gamma{ 2.2f };
-    bool useSSAO{true};
     float parallaxScale{ 0.2f };
-    float hdrExposure{ 1.0f };
-    bool bloom{true};
 private:
     void createSkybox();
     void drawSkybox(const Camera& cam);
     unsigned createFBO(unsigned *colorTexts, int colorTexCount, unsigned depthStencil = 0);
-    void createPingPongFBOs();
     unsigned create2DShadowFBO(unsigned depthTex);
 
     static unsigned createCubemapShadowFBO(unsigned depthCubemap);
@@ -96,6 +89,8 @@ public:
     unsigned getFinalSceneTexture();
 
     void changeViewportSize(int w, int h);
+
+    void imguiRender();
 
     void destroy();
 

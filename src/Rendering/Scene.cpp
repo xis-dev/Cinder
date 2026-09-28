@@ -7,6 +7,7 @@
 
 #include "imgui.h"
 
+#include <algorithm>
 
 Entity * Scene::getRoot() const
 {
@@ -142,6 +143,15 @@ void Scene::end()
 			if (lightEntIt != m_lights.end())
 			{
 				m_lights.erase(lightEntIt);
+			}
+
+			if (auto* dirLight = dynamic_cast<DirectionalLight*>(lightEnt))
+			{
+				auto dirLightIt = std::ranges::find_if(m_directionalLights.begin(), m_directionalLights.end(), [dirLight](const DirectionalLight* l){return l == dirLight;});
+				if (dirLightIt != m_directionalLights.end())
+				{
+					m_directionalLights.erase(dirLightIt);
+				}
 			}
 
 			if (auto* pointLight = dynamic_cast<PointLight*>(lightEnt))

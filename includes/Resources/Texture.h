@@ -66,9 +66,10 @@ public:
 	 void use() const;
 	static void unbind(GLenum activeTexUnit);
 	static unsigned createCubemap(const std::vector<std::string>& cubeFaces);
-	static unsigned createEmptyTex(const int w, const int h, GLenum internalFormat, GLenum desiredFormat, GLenum type = GL_FLOAT);
-	static unsigned createEmptyRenderbuffer(const int w, const int h, GLenum format, GLenum type = GL_UNSIGNED_INT_24_8);
-	static unsigned createEmptyCubemap(const int w, const int h, GLenum component, GLenum desiredFormat, GLenum type = GL_FLOAT);
+	static unsigned createEmptyTex(int w, int h, GLenum internalFormat, GLenum desiredFormat, GLenum type = GL_FLOAT);
+	static unsigned createEmptyTexArray(int layers, int w, int h, GLenum internalFormat, GLenum desiredFormat, GLenum type = GL_FLOAT);
+	static unsigned createEmptyRenderbuffer(int w, int h, GLenum format, GLenum type = GL_UNSIGNED_INT_24_8);
+	static unsigned createEmptyCubemap(int w, int h, GLenum component, GLenum desiredFormat, GLenum type = GL_FLOAT);
 
 	virtual void destroy() override;
 

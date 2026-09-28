@@ -19,7 +19,7 @@ protected:
 
 public:
 
-	bool canCastShadow{true};
+	static int m_lightCountByType;
 	void setLightID(int id) { m_lightID = id; }
 	void setIntensity(float i) { m_intensity = i; }
 	float getIntensity() { return m_intensity; }

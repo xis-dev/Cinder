@@ -1,5 +1,5 @@
 #include "Engine/Engine.h"
-#include <ranges>
+
 #include "Resources/Shader.h"
 #include "Resources/ResourceManager.h"
 #include "Resources/Texture.h"
@@ -13,12 +13,20 @@
 
 #include "Rendering/Renderer.h"
 
+#include "FileManager.h"
+
+#include "Cube.h"
+#include "Plane.h"
+
 #include "DefaultMacros.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include "FileLoader.h"
 #include "glm/gtx/norm.hpp"
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 Engine* Engine::g_instance {nullptr};
 
 Delegate<GLFWwindow*, int, int> Engine::OnWindowResized{};
@@ -207,14 +215,14 @@ void Engine::init(GLFWwindow*& window)
 	// Init renderer with 1,1 size, will take upon the size of render panel in user interface
 	renderer->init(m_window, m_assetManager.get(), m_currentScene.get(), 1, 1);
 
-	auto sponza = loadModel("C:/Users/PC/Desktop/dev/C++/Cinder/assets/Models/sponza_palace/scene.gltf");
+	auto sponza = loadModel("assets/Models/matikantenhauser/scene.gltf");
 	auto sponzaEnt = m_currentScene->createEntity<MeshEntity>("Robot", m_assetManager->models.get(sponza));
 	//robotEnt->setRotation(glm::vec3(1.0f, 0.0f, 0.0f), -90.0f);
-	sponzaEnt->setScale(1.0f);
+	sponzaEnt->setScale(15.0f);
 
 	auto floorEnt = createFloor();
 
-	floorEnt->setParent(sponzaEnt);
+	//floorEnt->setParent(sponzaEnt);
 
 	//
 	// for (int i = 1; i < 10; ++i)
@@ -225,13 +233,10 @@ void Engine::init(GLFWwindow*& window)
 	// 		glm::vec3(2.0f));
 	// }
 
-	auto dirEnt = createDirectionalLight("DirectionalLight", glm::vec3(3.0f, -10.0f, 3.0f));
+	auto dirEnt = createDirectionalLight("DirectionalLight", glm::vec3(-1.0f, -1.0f, -1.0f));
 
-	dirEnt->setParent(floorEnt);
+	dirEnt->setParent(sponzaEnt);
 
-	auto dirEnt2 = createDirectionalLight("DirectionalLight", glm::vec3(3.0f, -10.0f, 3.0f));
-
-	dirEnt2->setParent(sponzaEnt);
 	for (int i = 0; i < 1;++i) {
 	createPointLight("PointLight" + std::to_string(i), 500.0f ,glm::vec3(pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z));
 
@@ -421,14 +426,6 @@ void Engine::imguiUpdate()
 	ImGui::DragFloat("Camera Near Plane", &camera.m_nearPlane, 0.01f);
 	ImGui::DragFloat("Gamma Correction exp", &renderer->gamma, 0.1f);
 	ImGui::DragFloat("Parallax Map Height", &renderer->parallaxScale, 0.1f);
-	ImGui::DragFloat("HDR Exposure", &renderer->hdrExposure, 0.1f);
-	ImGui::Checkbox("SSAO", &renderer->useSSAO);
-	ImGui::Checkbox("Grid", &renderer->drawGrid);
-	ImGui::Checkbox("HDR", &renderer->hdr);
-	ImGui::Checkbox("Blinn-Phong", &renderer->blinnLighting);
-	ImGui::Checkbox("Draw Cubemap", &renderer->cubeMapEnabled);
-	ImGui::Checkbox("Enable Backface Culling", &renderer->cullBackface);
-	ImGui::Checkbox("Draw Wireframe", &renderer->drawWireframe);
 	std::string deltaTimeText{};
 	std::string frameRateText{};
 	deltaTimeText = "Delta Time: " + std::to_string(static_cast<int>(std::floor(float(1000 / (1 / m_deltaTime))))) + " ms/s";
@@ -566,7 +563,7 @@ void Engine::createObjectIcons()
 Entity* Engine::createFloor()
 {
 	auto* floor = m_currentScene->createEntity<MeshEntity>("Floor", m_assetManager->models.get("floor"));
-	floor->setScale(35.0f);
+	floor->setScale(50.0f);
 	return (floor);
 	//for (auto& modelSet : floor->getModel()->getMeshes())
 	//{
@@ -588,6 +585,7 @@ void Engine::createPointLight(const std::string& name, float radius, glm::vec3 p
 {
 	auto* light = m_currentScene->createEntity<PointLight>(name, radius);
 	light->setPosition(position);
+	light->setIntensity(0.0f);
 }
 
 Entity* Engine::createDirectionalLight(const std::string& name, glm::vec3 direction)

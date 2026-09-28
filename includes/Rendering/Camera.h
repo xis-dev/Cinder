@@ -7,6 +7,7 @@
 #include <glm/ext/matrix_clip_space.hpp>
 
 #include <cmath>
+#include <vector>
 
 
 class Camera
@@ -23,7 +24,17 @@ public:
 		setProjectionMatrix();
 	}
 
-
+private:
+	constexpr static glm::vec4 relativeFrustumCube[8] = {
+		{-1, -1, 0, 1},
+		{-1,  1, 0, 1},
+		{ 1,  1, 0, 1},
+		{ 1, -1, 0, 1},
+		{-1, -1, 1, 1},
+		{-1,  1, 1, 1},
+		{ 1,  1, 1, 1},
+		{ 1, -1, 1, 1}
+	};
 public:
 	glm::vec3 m_up = glm::vec3(0.0f, 1.0f, 0.0f);
 	glm::vec3 m_position{};
@@ -33,6 +44,7 @@ public:
 	glm::mat4 m_viewMatrix{};
 
 	float m_maxFov{};
+	// Horizontal(y) fov
 	float m_currentFov{};
 	float m_yaw{};
 	float m_pitch{};
@@ -53,6 +65,16 @@ public:
 	glm::vec3 getDirection() const;
 	glm::vec3 getRightVector() const;
 	glm::vec3 getUpVector() const;
+
+	/**
+	 * Order: Forward, Up, Right
+	 */
+	std::vector<glm::vec3> getWorldBasis();
+
+	static std::vector<glm::vec3> getFrustumCorners(const glm::vec3 &pos, const glm::vec3 &zBasis, float near, float far, float
+	                                                fovy, float aspect) ;
+
+
 
 	float m_nearPlane{};
 	float m_farPlane{};

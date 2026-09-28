@@ -24,8 +24,6 @@ private:
     Shader* m_defaultShader{nullptr};
     Shader* m_blurShader{nullptr};
 
-    int m_width{};
-    int m_height{};
 
 
     std::vector<glm::vec3> sampleKernel{};

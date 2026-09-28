@@ -31,4 +31,6 @@ Thumbs.db
 
 # Project
 unnamed.patch
-unincluded/
+unincluded/debug_captures/
+CMakeSettings.json
+*.rdc

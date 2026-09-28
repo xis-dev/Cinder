@@ -55,6 +55,7 @@ public:
 	std::unordered_map<Shader*, std::unordered_map<const ModelSet*, Entity*>> m_renderBatches{};
 	std::vector<MeshEntity*> m_meshEnts{};
 	std::vector<glm::mat4> dirLightTransforms{};
+	std::vector<DirectionalLight*> m_directionalLights;
 
 public:
 	template<typename T, typename... TArgs>
@@ -76,6 +77,7 @@ public:
 				glm::mat4 proj = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
 				glm::mat4 view = glm::lookAt(static_cast<glm::vec3>(-dir) * 20.0f, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 				dirLightTransforms.push_back(proj * view);
+				m_directionalLights.push_back(rawPtr);
 			}
 			if constexpr (std::is_same_v<T, PointLight>)
 			{

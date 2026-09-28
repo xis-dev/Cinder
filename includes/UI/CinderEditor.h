@@ -2,6 +2,8 @@
 #include "Delegate.h"
 #include "GLFW/glfw3.h"
 
+#include <memory>
+
 class RenderConfigPanel;
 class Entity;
 class SceneHierarchyPanel;

@@ -19,7 +19,7 @@ Texture::Texture(const std::string& fileName , Texture::Type texType, bool flipO
 unsigned int Texture::loadTextureFile(const std::string& filePath, Type texType, bool flipOnLoad, GLenum wrapType,
 	unsigned desiredFormat)
 {
-	unsigned int id{};
+	unsigned int id;
 	glGenTextures(1, &id);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, id);
@@ -185,13 +185,35 @@ unsigned Texture::createEmptyTex(const int w, const int h, GLenum internalFormat
 	//float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	//glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
+	glBindTexture(GL_TEXTURE_2D, 0);
 
+	return id;
+}
+
+unsigned Texture::createEmptyTexArray(int layers, int w, int h, GLenum internalFormat, GLenum desiredFormat,
+	GLenum type)
+{
+	unsigned id;
+	glGenTextures(1, &id);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, id);
+
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, (GLint)internalFormat, w, h, layers, 0, desiredFormat, type, nullptr);
+
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
 	return id;
 }
 
 unsigned Texture::createEmptyRenderbuffer(const int w, const int h, GLenum format,
-	GLenum type)
+                                          GLenum type)
 {
 	unsigned id;
 	glGenRenderbuffers(1, &id);

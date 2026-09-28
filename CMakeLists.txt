@@ -1,7 +1,9 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 4.1)
 
 project(Cinder LANGUAGES C CXX)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_COMPILE_WARNING_AS_ERROR OFF)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -32,11 +34,14 @@ FetchContent_MakeAvailable(imgui)
 FetchContent_Declare(
         assimp
         GIT_REPOSITORY https://github.com/assimp/assimp.git
-        GIT_TAG v6.0.1
+        GIT_TAG v6.0.5
 )
 set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "Don't build assimp tools" FORCE)
 set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "Don't build tests" FORCE)
 set(ASSIMP_INSTALL OFF CACHE BOOL "Don't install" FORCE)
+set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "Don't treat assimp warnings as errors" FORCE)
+set(ASSIMP_BUILD_ZLIB ON CACHE BOOL "Build Assimp's bundled zlib" FORCE)
+
 FetchContent_MakeAvailable(assimp)
 
 
@@ -72,6 +77,7 @@ set (INCLUDE_DIRS
     includes/Primitives
     includes/Resources
     includes/Rendering
+    includes/Rendering/RenderPasses
     includes/Utilities
     
 )
@@ -97,7 +103,9 @@ set (HEADER_SOURCES
     includes/Resources/Model.h
         includes/Utilities/AssetManager.h
  "includes/Resources/Handle.h" "includes/Primitives/Skybox.h"
-        includes/Utilities/DefaultMacros.h)
+        includes/Utilities/DefaultMacros.h
+	includes/Rendering/RenderPasses/RenderPass.h)
+
 
 set(PROJECT_SOURCES
      ${MATH}
@@ -140,19 +148,17 @@ set(PROJECT_SOURCES
         src/Resources/ModelLoader.cpp
         src/Utilities/FileLoader.cpp
         src/UI/CinderEditor.cpp
-        includes/UI/CinderEditor.h
         src/UI/ImGuiPanel.cpp
-        includes/UI/ImGuiPanel.h
         src/Rendering/FrameBuffer.cpp
-        includes/Rendering/FrameBuffer.h
-        src/Rendering/SSAORenderPass.cpp
-        includes/Rendering/Techniques/SSAORenderPass.h
+        src/Rendering/RenderPasses/SSAORenderPass.cpp
         src/Primitives/Quad.cpp
-        includes/Rendering/Techniques/RenderPass.h
         src/Rendering/GBuffer.cpp
-        includes/Rendering/GBuffer.h
-        src/Rendering/Techniques/DeferredLightPass.cpp
-        includes/Rendering/Techniques/DeferredLightPass.h)
+	src/Rendering/RenderPasses/DeferredLightPass.cpp
+	src/Rendering/RenderPasses/BloomPass.cpp
+        src/Rendering/RenderPasses/HDRPass.cpp
+        src/Rendering/RenderPasses/HDRPass.h
+        src/Rendering/RenderPasses/DirectionalShadowPass.cpp
+        src/Rendering/RenderPasses/DirectionalShadowPass.h)
 
 set(IMGUI_SOURCES
         ${imgui_SOURCE_DIR}/imgui.cpp

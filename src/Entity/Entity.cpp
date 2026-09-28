@@ -4,6 +4,8 @@
 
 #include "imgui.h"
 
+#include <algorithm>
+
 void Entity::findAndRemoveChild(Entity *child)
 {
 	if (auto childIterator = std::find_if(m_children.begin(), m_children.end(), [child](const Entity* entPtr){return entPtr == child;});
