@@ -3,7 +3,10 @@
 
 #include "Math/Vec3.h"
 #include "Delegate.h"
+#include "AABB.h"
+
 #include "glm/ext/matrix_transform.hpp"
+
 #include <string>
 #include <vector>
 
@@ -27,6 +30,7 @@ private:
 	std::vector<Entity*> m_children;
 
 protected:
+	//AABB m_boundingBox;
 	char m_tag[MAX_NAME_LENGTH]{};
 	glm::vec3 m_position{};
 	glm::vec3 m_currentRotationAxis{glm::vec3(0.0f, 1.0f, 0.0f)};

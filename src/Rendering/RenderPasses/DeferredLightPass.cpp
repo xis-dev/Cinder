@@ -102,11 +102,16 @@ void DeferredLightPass::configuredRender(const FrameContext &ctx, const SSAORend
 
     scene->illuminate(*m_shader);
 
-    m_shader->setUniformMat4("m_LightSpace", shadowPass.lightTransform);
     m_shader->setUniformi("u_CascadeMapCount", shadowPass.numberOfSplits);
     for (int i = 0; i < shadowPass.numberOfSplits; ++i)
     {
+        const std::string lsUniformStr = "m_LightSpace[" + std::to_string(i) + "]";
+        const std::string tsUniformStr = "m_CascadeTexelWorld[" + std::to_string(i) + "]";
+
         m_shader->setUniformf(shadowPass.cascadeUniformStrings[i].c_str(), shadowPass.m_cascadeSplits[i]);
+
+        m_shader->setUniformMat4(lsUniformStr.c_str(), shadowPass.m_lightTransforms[i]);
+        m_shader->setUniformMat4(tsUniformStr.c_str(), shadowPass.m_cascadeTexelWorld[i]);
     }
 
     m_shader->setUniformVec3("u_CameraPosition", cam.getPosition());

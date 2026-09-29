@@ -11,7 +11,7 @@ uniform mat4 m_View;
 uniform mat4 m_MVP;
 uniform mat4 m_MV;
 
-uniform mat4 m_LightSpace;
+//uniform mat4 m_LightSpace;
 uniform vec3 u_CameraPosition;
 
 
@@ -19,7 +19,7 @@ uniform vec3 u_CameraPosition;
 out vec2 v_UV;
 out vec3 v_WorldPos;
 out vec3 v_WorldNormal;
-out vec4 v_LightSpacePos;
+//out vec4 v_LightSpacePos;
 out mat3 v_TBN;
 out vec3 v_TangentCameraPos;
 out vec3 v_TangentFragPos;
@@ -30,7 +30,7 @@ void main() {
 	v_UV = a_TexCoords;
 	v_WorldPos = vec3(m_Model * vec4(a_Position, 1.0));
     mat3 modelNoScale = mat3(transpose(inverse(m_Model)));
-	v_LightSpacePos = m_LightSpace * vec4(v_WorldPos, 1.0);
+	//v_LightSpacePos = m_LightSpace * vec4(v_WorldPos, 1.0);
 
     v_WorldNormal = normalize(modelNoScale * a_Normal);
     vec3 T = normalize(modelNoScale * a_Tangent);

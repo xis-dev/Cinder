@@ -1,12 +1,8 @@
-//
-// Created by PC on 29-Jul-26.
-//
-
 #include "DirectionalShadowPass.h"
 
-#include "Quad.h"
 #include "Scene.h"
 #include "Texture.h"
+#include "AABB.h"
 
 void DirectionalShadowPass::updateSplits(std::vector<float> &splits, float near, float far, float linearCorrection)
 {
@@ -53,83 +49,62 @@ void DirectionalShadowPass::configuredRender(const FrameContext &ctx, const Came
 {
     glBindFramebuffer(GL_FRAMEBUFFER, m_buffer.getFrameBuffer());
     glViewport(0, 0, (int)mainResolution.x, (int)mainResolution.y);
-    glClear(GL_DEPTH_BUFFER_BIT);
 
+    // Casters infront of near still write depth
+    glEnable(GL_DEPTH_CLAMP);
     m_shader->use();
 
-
-
     updateSplits(m_cascadeSplits, cam.m_nearPlane, cam.m_farPlane, correctionStrength);
-
     const glm::vec3& lightDir = glm::normalize(scene->m_directionalLights[0]->m_direction);
 
     // TODO: Should actually be the AABB of all entiies/scene but dont have AABB setup yet
     // TODO: Position is wrong, opengl looks down z axis, take dot with each default basis?
-    std::vector<glm::vec3> overallFrustumCorners = Camera::getFrustumCorners(cam.getPosition(), glm::normalize(cam.m_direction),
+    auto overallFrustumCorners = Camera::getFrustumCorners(cam.getPosition(), glm::normalize(cam.m_direction),
                                                     cam.m_nearPlane, cam.m_farPlane, cam.m_currentFov, cam.m_aspectRatio);
 
     AABB cameraFrustumBB = AABB::getAABB(overallFrustumCorners);
     // TODO: Should actually be the AABB of all entiies/scene but dont have AABB setup yet
-    glm::vec3 lightPos = (cameraFrustumBB.diagonalDistance / 2.0f) * -lightDir;
-
-    glm::vec3 up{0.0f, 1.0f, 0.0f};
+    glm::vec3 lightPos = -lightDir;
 
     // TODO: Not sure actually, theres only 1 directional light, but need to have somewhere clipping it to one, maybe in scene
-    if (std::abs(glm::dot(up, lightDir)) > 0.999f)
-    {
-        up = {0.0f, 0.0f, 1.0f};
-    }
-
-    glm::vec3 basisUp = glm::normalize(up - glm::dot(up, lightDir) * lightDir);
-    glm::vec3 basisRight = glm::cross(lightDir, up);
-
-    glm::mat4 orthogonalMat = glm::mat4{glm::vec4{basisRight, 1.0f}, glm::vec4{basisUp, 1.0f}, glm::vec4{lightDir, 1.0f}, glm::vec4{0.0f, 0.0f, 0.0f, 1.0f}};
-
-    orthogonalMat = orthogonalMat * glm::transpose(orthogonalMat);
-
-    const glm::mat4 lightView = glm::lookAt(lightPos, cameraFrustumBB.center, up);
-
+    glm::vec3 up = std::fabs(glm::dot({0.0f, 1.0f, 0.0f}, lightDir)) > 0.9999f ? glm::vec3{0.0f, 0.0f, 1.0f} : glm::vec3{0.0f, 1.0f, 0.0f};
 
 
     for (int i = 0; i < m_cascadeSplits.size(); ++i)
     {
-        float near = i < 1 ? cam.m_nearPlane : m_cascadeSplits[i - 1];
+        float near = i == 0 ? cam.m_nearPlane : m_cascadeSplits[i - 1];
         std::vector<glm::vec3> frustumCorners = Camera::getFrustumCorners(cam.getPosition(), glm::normalize(cam.m_direction),
                                                                           near, m_cascadeSplits[i], cam.m_currentFov, cam.m_aspectRatio);
-
-    glm::mat4 lightProjection = glm::identity<glm::mat4>();
-    glm::mat4 lVP = orthogonalMat * lightView;
-
-        std::vector<glm::vec3> frustumCorners_LightSpace{};
-        frustumCorners_LightSpace.reserve(8);
-        for (auto& corner: frustumCorners)
-        {
-            frustumCorners_LightSpace.emplace_back(lightView * glm::vec4{corner, 1.0f});
-
+        glm::vec3 center{0.0f};
+        for (const auto& c: frustumCorners) {
+            center += c;
         }
+        center /= (float)frustumCorners.size();
 
-    AABB lBB = AABB::getAABB(frustumCorners_LightSpace);
+        glm::mat4 view = glm::lookAt(center - lightDir, center, up);
 
-    // Calculate scale and offset for crop matrix
-    glm::vec2 s = {2.0f / (lBB.boundsMax.x - lBB.boundsMin.x), 2.0f / (lBB.boundsMax.y - lBB.boundsMin.y)};
-    glm::vec2 o = {-0.5f  * (lBB.boundsMax.x + lBB.boundsMin.x) * s.x, -0.5f * (lBB.boundsMax.y + lBB.boundsMin.y) * s.y};
+        std::vector<glm::vec3> ls;
+        ls.reserve(8);
 
+        for (const auto& c: frustumCorners) {
+            ls.emplace_back(view * glm::vec4(c, 1.0f));
+        }
+        auto bb = AABB::getAABB(ls);
 
-    // TODO: Change vector order if im wrong about major order
-    glm::mat4 cropMatrix = {glm::vec4{s.x, 0.0f, 0.0f, 0.0f},
-                            glm::vec4{0.0f, s.y, 0.0f, 0.0f},
-                            glm::vec4{0.0f, 0.0f, 1.0f, 0.0f},
-                            glm::vec4{o.x, o.y, 0.0f, 1.0f}};
+        float texelWorld = (bb.boundsMax.x - bb.boundsMin.x) / float(mainResolution.x); // after computing ortho bounds
+        m_cascadeTexelWorld[i] = texelWorld;
+        // Light view looks down z, closer means larger z
+        // Pad near so casters out of camera frustum but in light frustum are still included
+        // TODO: Replace padding with scene AABB extent
+        float casterPad = 500.0f;
+        glm::mat4 proj = glm::ortho(bb.boundsMin.x, bb.boundsMax.x, bb.boundsMin.y, bb.boundsMax.y, -bb.boundsMax.z - casterPad, -bb.boundsMin.z);
 
-    glm::mat4 zLightProjection = glm::ortho(lBB.boundsMin.x, lBB.boundsMax.x, lBB.boundsMin.y, lBB.boundsMax.y, lBB.boundsMin.z, lBB.boundsMax.z);
-    //zLightProjection = cropMatrix * zLightProjection;
-       // lightProjection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 2000.0f);
-       // lightProjection = glm::perspective(cam.m_currentFov, cam.m_aspectRatio, 0.1f, 2000.0f);
-
-    m_shader->setUniformMat4("u_LightProjView", zLightProjection * cropMatrix * lightView);
-    lightTransform = zLightProjection * cropMatrix * lightView;
+        m_lightTransforms[i] = proj * view;
+        m_shader->setUniformMat4("u_LightProjView", m_lightTransforms[i]);
 
         glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texArray, 0, i);
+
+        glClear(GL_DEPTH_BUFFER_BIT);
         for (const auto& ent: scene->m_meshEnts)
         {
             for (auto& modelSet: ent->getModel()->getMeshes())
@@ -139,7 +114,9 @@ void DirectionalShadowPass::configuredRender(const FrameContext &ctx, const Came
             }
         }
 
-        glClear(GL_DEPTH_BUFFER_BIT);
+        continue;
+
+
 
     }
 

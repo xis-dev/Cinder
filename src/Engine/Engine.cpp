@@ -215,10 +215,10 @@ void Engine::init(GLFWwindow*& window)
 	// Init renderer with 1,1 size, will take upon the size of render panel in user interface
 	renderer->init(m_window, m_assetManager.get(), m_currentScene.get(), 1, 1);
 
-	auto sponza = loadModel("assets/Models/matikantenhauser/scene.gltf");
-	auto sponzaEnt = m_currentScene->createEntity<MeshEntity>("Robot", m_assetManager->models.get(sponza));
+	auto sponza = loadModel("assets/Models/sponza_palace/scene.gltf");
+	auto sponzaEnt = m_currentScene->createEntity<MeshEntity>("Sponza Palace", m_assetManager->models.get(sponza));
 	//robotEnt->setRotation(glm::vec3(1.0f, 0.0f, 0.0f), -90.0f);
-	sponzaEnt->setScale(15.0f);
+	//sponzaEnt->setScale(15.0f);
 
 	auto floorEnt = createFloor();
 
