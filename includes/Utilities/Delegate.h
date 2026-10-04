@@ -29,7 +29,7 @@ public:
     void bindFunction(Owner* owningObject,Return(Owner::*func)(Parameters...))
     {
         // Lambda to get the full function signature devoid of class type
-        bindFunction([owningObject, func](Parameters... p){(owningObject->*func)(p...);});
+        bindFunction([owningObject, func](Parameters&&... p){(owningObject->*func)(std::forward<Parameters>(p)...);});
     }
 
     virtual void unbindFunction(std::function<Return(Parameters...)> func)
@@ -44,7 +44,7 @@ public:
     void unbindFunction(Owner* owningObject,Return(Owner::*func)(Parameters...))
     {
         // Lambda to get the full function signature devoid of class type
-        unbindFunction([owningObject, func](Parameters... p){(owningObject->*func)(p...);});
+        unbindFunction([owningObject, func](Parameters&&... p){(owningObject->*func)(std::forward<Parameters>(p)...);});
     }
 
     virtual void broadcast(Parameters... p) const
@@ -76,7 +76,7 @@ public:
     void bindFunction(Owner* owningObject,void(Owner::*func)(Parameters...))
     {
         // Lambda to get the full function signature devoid of class type
-        bindFunction([owningObject, func](Parameters... p){(owningObject->*func)(p...);});
+        bindFunction([owningObject, func](Parameters&&... p){(owningObject->*func)(std::forward<Parameters>(p)...);});
     }
 
     virtual void unbindFunction(std::function<void(Parameters...)> func) override
@@ -95,7 +95,7 @@ public:
     void unbindFunction(Owner* owningObject,void(Owner::*func)(Parameters...))
     {
         // Lambda to get the full function signature devoid of class type
-        unbindFunction([owningObject, func](Parameters... p){(owningObject->*func)(p...);});
+        unbindFunction([owningObject, func](Parameters&&... p){(owningObject->*func)(std::forward<Parameters>(p)...);});
     }
 
     void  broadcast(Parameters... params) const override

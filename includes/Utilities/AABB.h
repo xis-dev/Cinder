@@ -6,16 +6,19 @@
 
 struct AABB
 {
+    AABB() = default;
+
+
     AABB(const glm::vec3& min, const glm::vec3& max): boundsMin(min), boundsMax(max)
     {
         const glm::vec3 minToMax = boundsMax - boundsMin;
         center = boundsMin + 0.5f * minToMax;
         diagonalDistance = glm::length(minToMax);
     }
-    glm::vec3 boundsMin;
-    glm::vec3 boundsMax;
+    glm::vec3 boundsMin{};
+    glm::vec3 boundsMax{};
     glm::vec3 center{};
-    float diagonalDistance;
+    float diagonalDistance{};
 
     static AABB getAABB(const std::vector<glm::vec3>& positions)
     {

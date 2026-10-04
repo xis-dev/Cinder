@@ -104,7 +104,11 @@ set (HEADER_SOURCES
         includes/Utilities/AssetManager.h
  "includes/Resources/Handle.h" "includes/Primitives/Skybox.h"
         includes/Utilities/DefaultMacros.h
-	includes/Rendering/RenderPasses/RenderPass.h)
+	includes/Rendering/RenderPasses/RenderPass.h
+        includes/Rendering/SceneManagers/LightManager.cpp
+        includes/Rendering/SceneManagers/LightManager.h
+        includes/Entity/Component.h
+        includes/Utilities/CinUtility.h)
 
 
 set(PROJECT_SOURCES
@@ -158,7 +162,8 @@ set(PROJECT_SOURCES
         src/Rendering/RenderPasses/HDRPass.cpp
         src/Rendering/RenderPasses/HDRPass.h
         src/Rendering/RenderPasses/DirectionalShadowPass.cpp
-        src/Rendering/RenderPasses/DirectionalShadowPass.h)
+        src/Rendering/RenderPasses/DirectionalShadowPass.h
+)
 
 set(IMGUI_SOURCES
         ${imgui_SOURCE_DIR}/imgui.cpp

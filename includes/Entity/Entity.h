@@ -1,6 +1,9 @@
 #pragma once
 
 
+#include <format>
+#include <memory>
+
 #include "Math/Vec3.h"
 #include "Delegate.h"
 #include "AABB.h"
@@ -10,11 +13,27 @@
 #include <string>
 #include <vector>
 
+#include "CinUtility.h"
+#include "Component.h"
+
 class Scene;
 
 class Shader;
 class Texture;
 
+typedef uint32_t ComponentTypeID;
+
+namespace ComponentUtil
+{
+	inline ComponentTypeID nextComponentID{};
+
+	template<CinUtility::DerivedConcept<Component> T>
+	ComponentTypeID getComponentID()
+	{
+		static ComponentTypeID id = nextComponentID++;
+		return id;
+	}
+}
 
 class Entity 
 {
@@ -26,12 +45,27 @@ public:
 	virtual ~Entity() = default;
 
 private:
-	Entity*m_parent = nullptr;
+	std::string m_tag;
+	Entity* m_parent {nullptr};
 	std::vector<Entity*> m_children;
+	std::unordered_map<ComponentTypeID, std::unique_ptr<Component>> m_components;
+
+public:
+	template<CinUtility::DerivedConcept<Component> T, typename ... TArgs>
+	T* addComponent(TArgs&&... args);
+
+	template<CinUtility::DerivedConcept<Component> T>
+	T* getComponent();
+
+	template<CinUtility::DerivedConcept<Component> T>
+	const T* getComponent() const;
+
+	template<CinUtility::DerivedConcept<Component> T>
+	[[nodiscard]] bool hasComponent() const;
 
 protected:
 	//AABB m_boundingBox;
-	char m_tag[MAX_NAME_LENGTH]{};
+
 	glm::vec3 m_position{};
 	glm::vec3 m_currentRotationAxis{glm::vec3(0.0f, 1.0f, 0.0f)};
 	float m_currentRotationAngle{};
@@ -91,5 +125,53 @@ protected:
 	virtual void OnDestroyed();
 };
 
+template<CinUtility::DerivedConcept<Component> T, typename ... TArgs>
+T * Entity::addComponent(TArgs &&...args){
+
+	std::unique_ptr<Component> newComponent = std::make_unique<T>(std::forward<TArgs>(args)...);
+	T* rawPtr = newComponent.get();
+
+	try {
+		if (!m_components.insert({ComponentUtil::getComponentID<T>(), std::move(newComponent)}))
+		{
+			std::cout << std::format("ENTITY_LOG: Attempt to add component {ID: %i} to entity '%s' with already exising component, request will be ignored.\n", ComponentUtil::getComponentID<T>(), m_tag);
+
+			// Return actual existing component
+			return m_components[ComponentUtil::getComponentID<T>()];
+		}
+	}
+	catch (const std::bad_alloc& badAlloc) {
+		std::cout << std::format("Caught exception while inserting component {ID %i} to entity '%s': ", ComponentUtil::getComponentID<T>(), m_tag) << badAlloc.what() << "\n";
+
+		return nullptr;
+	}
+
+	return rawPtr;
+
+}
+
+template<CinUtility::DerivedConcept<Component> T>
+T * Entity::getComponent()
+{
+	const auto& it = m_components.find(ComponentUtil::getComponentID<T>());
+	if (it != m_components.end()) return static_cast<T*>(it->second.get());
+
+	return nullptr;
+}
+
+template<CinUtility::DerivedConcept<Component> T>
+const T * Entity::getComponent() const
+{
+	const auto& it = m_components.find(ComponentUtil::getComponentID<T>());
+	if (it != m_components.end()) return static_cast<const T*>(it->second.get());
+
+	return nullptr;
+}
+
+template<CinUtility::DerivedConcept<Component> T>
+bool Entity::hasComponent() const
+{
+	return m_components.contains(ComponentUtil::getComponentID<T>());
+}
 
 

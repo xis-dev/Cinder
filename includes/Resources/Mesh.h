@@ -2,7 +2,7 @@
 
 #include "Graphics/Vertex.h"
 
-
+#include "AABB.h"
 #include "Resources/Resource.h"
 
 #include <vector>
@@ -22,20 +22,8 @@ public:
 	Mesh& operator=(const Mesh& mesh) = delete;
 	Mesh(const Mesh& mesh) = delete;
 
-	Mesh(Mesh&& m) noexcept: vao(m.vao), vbo(m.vbo), ebo(m.ebo),
-							m_vertices(std::move(m.m_vertices)), m_indices(std::move(m.m_indices)), 
-							m_idxCount(m.m_idxCount)
-	{
-		m.vao = 0;
-		m.vbo = 0;
-		m.ebo = 0;
+	Mesh(Mesh&& m) noexcept;
 
-		m.m_vertices.clear();
-		m.m_indices.clear();
-
-		m.m_idxCount = 0;
-
-	}
 	Mesh& operator=(Mesh&& m) noexcept {
 		if (this != &m)
 		{
@@ -61,9 +49,9 @@ public:
 	unsigned int vao{}, vbo{}, ebo{};
 	std::vector<Vertex> m_vertices{};
 	std::vector<unsigned int> m_indices{};
-	size_t m_idxCount;
+	size_t m_idxCount{};
+	AABB m_AABB{};
 
-	
 	void setupMesh();
 
 	void draw() const;

@@ -10,6 +10,21 @@ Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>&
 	setupMesh();
 }
 
+Mesh::Mesh(Mesh&& m) noexcept: vao(m.vao), vbo(m.vbo), ebo(m.ebo),
+						m_vertices(std::move(m.m_vertices)), m_indices(std::move(m.m_indices)),
+						m_idxCount(m.m_idxCount)
+{
+	m.vao = -1;
+	m.vbo = -1;
+	m.ebo = -1;
+
+	m.m_vertices.clear();
+	m.m_indices.clear();
+
+	m.m_idxCount = -1;
+
+}
+
 
 void Mesh::setupMesh()
 {
@@ -29,10 +44,9 @@ void Mesh::setupMesh()
 		
 	m_idxCount = m_indices.size();
 
+	// TODO: Meshes should not be loaded into gpu memory till a MeshEntity is created with it
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * m_vertices.size(), m_vertices.data(), GL_STATIC_DRAW);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned) * m_indices.size(), m_indices.data(), GL_STATIC_DRAW);
-
-
 
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, position)));
@@ -50,6 +64,15 @@ void Mesh::setupMesh()
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	std::vector<glm::vec3> positions{};
+	positions.reserve(m_vertices.size());
+
+	for (const auto& v: m_vertices) {
+		positions.push_back(v.position);
+	}
+
+	m_AABB = AABB::getAABB(positions);
 
 	m_vertices.clear();
 	m_vertices.shrink_to_fit();
