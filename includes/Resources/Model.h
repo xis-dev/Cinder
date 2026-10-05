@@ -19,6 +19,7 @@ struct ModelSet {
 	Mesh mesh;
 	Handle<Material> mat;
 };
+
 class Model: public Resource {
 public:
 	Model() = default;

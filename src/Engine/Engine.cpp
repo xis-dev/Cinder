@@ -27,6 +27,11 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "Components/MeshComponent.h"
+#include "Components/LightComponent.h"
+
+#include <variant>
+
 Engine* Engine::g_instance {nullptr};
 
 Delegate<GLFWwindow*, int, int> Engine::OnWindowResized{};
@@ -216,7 +221,9 @@ void Engine::init(GLFWwindow*& window)
 	renderer->init(m_window, m_assetManager.get(), m_currentScene.get(), 1, 1);
 
 	auto sponza = loadModel("assets/Models/sponza_palace/scene.gltf");
-	auto sponzaEnt = m_currentScene->createEntity<MeshEntity>("Sponza Palace", m_assetManager->models.get(sponza));
+	auto sponzaEnt = m_currentScene->createEntity("Sponza Palace");
+	sponzaEnt->addComponent<MeshComponent>(m_assetManager->models.get(sponza));
+
 	//robotEnt->setRotation(glm::vec3(1.0f, 0.0f, 0.0f), -90.0f);
 	//sponzaEnt->setScale(15.0f);
 
@@ -235,7 +242,7 @@ void Engine::init(GLFWwindow*& window)
 
 	auto dirEnt = createDirectionalLight("DirectionalLight", glm::vec3(-1.0f, -1.0f, -1.0f));
 
-	dirEnt->setParent(sponzaEnt);
+	dirEnt->setParent(*sponzaEnt);
 
 	for (int i = 0; i < 1;++i) {
 	createPointLight("PointLight" + std::to_string(i), 500.0f ,glm::vec3(pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z));
@@ -306,7 +313,7 @@ void Engine::imguiUpdate()
 	entityNames.reserve(m_currentScene->getEntities().size());
 	for (auto& e : m_currentScene->getEntities())
 	{
-		entityNames.push_back(e->getTag());
+		entityNames.push_back(e->getTag().c_str());
 	}
 
 	auto matNames = m_assetManager->materials.getNames();
@@ -549,12 +556,8 @@ void Engine::createMaterials()
 void Engine::createObjectIcons()
 {
 	Handle<Texture> directionalLightIcon = m_assetManager->textures.add(Texture("assets/Textures/light-icon.png"), "icon_directionalLight");
-	Handle<Texture> pointLightIcon = m_assetManager->textures.add(Texture("assets/Textures/light-icon.png"), "icon_pointLight");
-	Handle<Texture> spotLightIcon = m_assetManager->textures.add(Texture("assets/Textures/light-icon.png"), "icon_spotLight");
 
-	IconRegistry::registerType<DirectionalLight>(m_assetManager->textures.get(directionalLightIcon));
-	IconRegistry::registerType<PointLight>(m_assetManager->textures.get(pointLightIcon));
-	IconRegistry::registerType<SpotLight>(m_assetManager->textures.get(spotLightIcon));
+	IconRegistry::registerType<LightComponent>(m_assetManager->textures.get(directionalLightIcon));
 
 }
 
@@ -562,20 +565,18 @@ void Engine::createObjectIcons()
 
 Entity* Engine::createFloor()
 {
-	auto* floor = m_currentScene->createEntity<MeshEntity>("Floor", m_assetManager->models.get("floor"));
-	floor->setScale(50.0f);
+	auto* floor = m_currentScene->createEntity("Floor");
+	floor->addComponent<MeshComponent>(m_assetManager->models.get("floor"));
+	floor->transform->m_scale = glm::vec3(50.0f);
+
 	return (floor);
-	//for (auto& modelSet : floor->getModel()->getMeshes())
-	//{
-	//	auto* mater = m_assetManager->materials.get(modelSet.mat);
-	//	mater->setColor(10.0f, 5.0f, 15.0f);
-	//}
 }
 
 void Engine::addMeshToScene(Model* model, glm::vec3 position)
 {
-	auto* entity = m_currentScene->createEntity<MeshEntity>("NewObject", model);
-	entity->setPosition(position);
+	auto* entity = m_currentScene->createEntity("NewObject");
+	entity->addComponent<MeshComponent>(model);
+	entity->transform->m_position = (position);
 }
 
 
@@ -583,26 +584,32 @@ void Engine::addMeshToScene(Model* model, glm::vec3 position)
 
 void Engine::createPointLight(const std::string& name, float radius, glm::vec3 position)
 {
-	auto* light = m_currentScene->createEntity<PointLight>(name, radius);
-	light->setPosition(position);
-	light->setIntensity(0.0f);
+	auto* light = m_currentScene->createEntity(name);
+	auto* lightComp = light->addComponent<LightComponent>(LightComponent::Type::Point);
+	light->transform->m_position = (position);
+	std::get<PointLightSettings>(lightComp->m_settings).m_attenuationRadius = radius;
 }
 
 Entity* Engine::createDirectionalLight(const std::string& name, glm::vec3 direction)
 {
-	auto* light = m_currentScene->createEntity<DirectionalLight>(name, direction);
-	light->setPosition(3.0f);
-	light->setIntensity(1.f);
+	auto* light = m_currentScene->createEntity(name);
+	auto* lightComp = light->addComponent<LightComponent>(LightComponent::Type::Directional);
+	std::get<DirectionalLightSettings>(lightComp->m_settings).m_direction = direction;
+	std::get<DirectionalLightSettings>(lightComp->m_settings).m_intensity = 1.0f;
+
 	return light;
 }
 
 void Engine::createCube(const std::string& name, const char* materialName, glm::vec3 position, float rotationAngle, glm::vec3 rotationAxis,
                         glm::vec3 scale)
 {
-	auto cube = m_currentScene->createEntity<MeshEntity>("Cube", m_assetManager->models.get("cube"));
-	cube->setPosition(position);
-	cube->setRotation(rotationAxis, rotationAngle);
-	cube->setScale(scale);
+	auto cube = m_currentScene->createEntity("Cube");
+	cube->addComponent<MeshComponent>(m_assetManager->models.get("cube"));
+
+	cube->transform->m_position = position;
+	cube->transform->m_rotationAxis = rotationAxis;
+	cube->transform->m_rotationAngle = rotationAngle;
+	cube->transform->m_scale = scale;
 }
 
 

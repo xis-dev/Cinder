@@ -12,9 +12,6 @@ struct PointLight{
     vec3 position;
     vec3 color;
 
-    float constant;
-    float linear;
-    float quadratic;
     float radius;
 };
 
@@ -265,7 +262,11 @@ vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex
         spec = pow(max(dot(viewDir, reflectedDir), 0.0), texture(u_GMaterial, v_UV).a);
     }
 
-    float attenuation = 1.0 / (light.constant + light.linear * dist + light.quadratic * (dist * dist));
+    float constant  = 1.0;
+    float linear    = 2.0 / light.radius;
+    float quadratic = 1.0 / (light.radius * light.radius);
+
+    float attenuation = 1.0 / (constant + linear * dist + quadratic * (dist * dist));
 
     float NdotV = max(dot(normal, viewDir), 0.0);
     float NdotL = max(dot(normal, lightDir), 0.0);

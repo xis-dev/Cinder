@@ -8,6 +8,7 @@
 class GBuffer;
 class Shader;
 
+// TODO: Add light entities from scene to context
 struct FrameContext
 {
     GBuffer *gBuffer{nullptr};

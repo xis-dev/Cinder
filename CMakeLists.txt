@@ -108,7 +108,10 @@ set (HEADER_SOURCES
         includes/Rendering/SceneManagers/LightManager.cpp
         includes/Rendering/SceneManagers/LightManager.h
         includes/Entity/Component.h
-        includes/Utilities/CinUtility.h)
+        includes/Utilities/CinUtility.h
+        includes/Entity/Components/LightComponent.h
+        includes/Entity/Components/MeshComponent.h
+)
 
 
 set(PROJECT_SOURCES
@@ -118,8 +121,8 @@ set(PROJECT_SOURCES
      src/Engine/Engine.cpp
 
      src/Entity/Entity.cpp
-     src/Entity/LightEntity.cpp
-     src/Entity/MeshEntity.cpp
+    # src/Entity/LightEntity.cpp
+     #src/Entity/MeshEntity.cpp
 
      src/Resources/Material.cpp
      src/Resources/Mesh.cpp
@@ -137,8 +140,8 @@ set(PROJECT_SOURCES
      src/Engine/Engine.cpp
 
      src/Entity/Entity.cpp
-     src/Entity/LightEntity.cpp
-     src/Entity/MeshEntity.cpp
+     #src/Entity/LightEntity.cpp
+     #src/Entity/MeshEntity.cpp
 
      src/Resources/Material.cpp
      src/Resources/Mesh.cpp
@@ -163,6 +166,9 @@ set(PROJECT_SOURCES
         src/Rendering/RenderPasses/HDRPass.h
         src/Rendering/RenderPasses/DirectionalShadowPass.cpp
         src/Rendering/RenderPasses/DirectionalShadowPass.h
+        includes/Entity/Components/Transform.cpp
+        includes/Entity/Components/Transform.h
+        includes/Entity/Components/LightComponent.cpp
 )
 
 set(IMGUI_SOURCES

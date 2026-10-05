@@ -5,35 +5,40 @@
 #include <typeindex>
 #include <unordered_map>
 
+#include "Component.h"
+#include "CinUtility.h"
+
 class Entity;
 
 class IconRegistry
 {
-
-	inline static std::unordered_map<std::type_index, Texture*> m_iconMap{};
+	inline static std::unordered_map<ComponentTypeID, Texture*> m_iconMap{};
 
 public:
-	template <typename T>
+	template <CinUtility::DerivedConcept<Component> T>
 	static void registerType(Texture* iconImage)
 	{
-		if constexpr (std::is_base_of_v<Entity, T>)
-		{
-			m_iconMap[typeid(T)] = iconImage;
-		}
+		m_iconMap[ComponentUtil::getComponentID<T>()] = iconImage;
 	}
 
-
-	template <typename T>
+	template <CinUtility::DerivedConcept<Component> T>
 	static Texture* tryGetIcon()
 	{
-		if constexpr (std::is_base_of_v<Entity, T>)
+		const auto& iterator = m_iconMap.find(ComponentUtil::getComponentID<T>());
+		if (iterator != m_iconMap.end())
 		{
-			auto iterator = m_iconMap.find(typeid(T));
-			if (iterator != m_iconMap.end())
-			{
-				return iterator->second;
-			}
-		}		
+			return iterator->second;
+		}
+		return nullptr;
+	}
+
+	static Texture* tryGetIcon(ComponentTypeID componentID)
+	{
+		const auto& iterator = m_iconMap.find(componentID);
+		if (iterator != m_iconMap.end())
+		{
+			return iterator->second;
+		}
 		return nullptr;
 	}
 

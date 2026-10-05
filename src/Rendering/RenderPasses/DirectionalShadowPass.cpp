@@ -3,6 +3,11 @@
 #include "Scene.h"
 #include "Texture.h"
 #include "AABB.h"
+#include "Components/LightComponent.h"
+
+#include <variant>
+
+#include "Components/MeshComponent.h"
 
 void DirectionalShadowPass::updateSplits(std::vector<float> &splits, float near, float far, float linearCorrection)
 {
@@ -55,7 +60,22 @@ void DirectionalShadowPass::configuredRender(const FrameContext &ctx, const Came
     m_shader->use();
 
     updateSplits(m_cascadeSplits, cam.m_nearPlane, cam.m_farPlane, correctionStrength);
-    const glm::vec3& lightDir = glm::normalize(scene->m_directionalLights[0]->m_direction);
+
+   const LightComponent* dirLight{nullptr};
+
+    const auto lights = scene->getEntitiesByComponents<LightComponent>();
+    const auto meshEnts = scene->getEntitiesByComponents<MeshComponent>();
+
+    for (const auto& light: lights)
+    {
+        const auto* lightComp = light->getComponent<LightComponent>();
+        if (lightComp->m_type == LightComponent::Type::Directional)
+        {
+            dirLight = lightComp;
+        }
+    }
+
+    const glm::vec3& lightDir = glm::normalize(get<DirectionalLightSettings>(dirLight->m_settings).m_direction);
 
     // TODO: Should actually be the AABB of all entiies/scene but dont have AABB setup yet
     // TODO: Position is wrong, opengl looks down z axis, take dot with each default basis?
@@ -105,11 +125,12 @@ void DirectionalShadowPass::configuredRender(const FrameContext &ctx, const Came
         glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texArray, 0, i);
 
         glClear(GL_DEPTH_BUFFER_BIT);
-        for (const auto& ent: scene->m_meshEnts)
+        for (const auto& ent: meshEnts)
         {
-            for (auto& modelSet: ent->getModel()->getMeshes())
+            const auto* meshComp = ent->getComponent<MeshComponent>();
+            for (auto& modelSet: meshComp->m_model->getMeshes())
             {
-                m_shader->setUniformMat4("u_Model", ent->getGlobalTransformMatrix());
+                m_shader->setUniformMat4("u_Model", Transform::getGlobalTransform(*ent));
                 modelSet.mesh.draw();
             }
         }

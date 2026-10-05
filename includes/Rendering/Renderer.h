@@ -10,6 +10,7 @@
 #include <string>
 
 #include "GBuffer.h"
+#include "Components/LightComponent.h"
 #include "RenderPasses/DeferredLightPass.h"
 #include "RenderPasses/SSAORenderPass.h"
 #include "src/Rendering/RenderPasses/BloomPass.h"
@@ -21,6 +22,8 @@ struct AssetManager;
 class Camera;
 class Texture;
 class PointLight;
+
+struct LightComponent;
 
 class Renderer
 {
@@ -72,13 +75,15 @@ private:
     unsigned create2DShadowFBO(unsigned depthTex);
 
     static unsigned createCubemapShadowFBO(unsigned depthCubemap);
-    void setupPointMatrices(PointLight* light, const int w, const int h);
     void renderScene(const Camera &cam, unsigned fboToRenderTo, int sceneW, int sceneH);
     void renderShadowMap();
     void renderPointMap(Scene *currentScene);
 
+    // TODO: Doesnt belong here, move to some light or shadow related
+    static std::array<glm::mat4, 6> getPointMapMatrices(const Entity &light, int w, int h);
 
-
+    // TODO: Doesnt belong here, move to some light related, really just for caching so we dont need to recreate each time
+    std::unordered_map<LightComponent::Type, uint32_t> m_lightCounts{};
 
     void updateRenderComponents(int w, int h);
 public:

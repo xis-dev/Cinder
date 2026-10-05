@@ -10,6 +10,5 @@ class LightManager {
 private:
     std::vector<LightEntity*> m_lights;
     std::vector<DirectionalLight*> m_dirLights;
-	std::unordered_map<PointLight*, PointShadow> m_pointShadows;
 };
 

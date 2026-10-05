@@ -84,7 +84,6 @@ void SpotLight::use(const Shader& shader)
 	LightEntity::use(shader);
 	const std::string uniformStr = "u_SpotLights[" + std::to_string(m_lightID) + "].";
 
-
 	shader.setUniformf((uniformStr + "innerCutoff").c_str(), m_innerCutoff);
 	shader.setUniformf((uniformStr + "outerCutoff").c_str(), m_outerCutoff);
 	shader.setUniformVec3((uniformStr + "color").c_str(), m_color);

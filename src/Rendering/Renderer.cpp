@@ -7,6 +7,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <random>
+#include <ranges>
 
 #include "Engine.h"
 #include "Quad.h"
@@ -14,10 +15,14 @@
 
 
 #include "imgui.h"
+#include "Components/LightComponent.h"
 
 #include "gtc/type_ptr.hpp"
 #include "gtx/norm.hpp"
 #include "RenderPasses/BloomPass.h"
+
+#include "Entity.h"
+#include "Components/MeshComponent.h"
 
 void Renderer::init(GLFWwindow *win, AssetManager *manager, Scene *scene, int width, int height)
 {
@@ -201,28 +206,6 @@ unsigned Renderer::createCubemapShadowFBO(unsigned depthCubemap)
     return id;
 }
 
-void Renderer::setupPointMatrices(PointLight *light, const int w, const int h)
-{
-    shadowTransforms.clear();
-    float aspect = (float) w / (float) h;
-    float near = 1.0f;
-    float far = 25.0f;
-    glm::mat4 shadow_proj = glm::perspective(glm::radians(90.0f), aspect, near, far);
-
-    glm::vec3 lightPos = light->getWorldPosition();
-    shadowTransforms.push_back(shadow_proj *
-                               glm::lookAt(lightPos, lightPos + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-    shadowTransforms.push_back(shadow_proj *
-                               glm::lookAt(lightPos, lightPos + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-    shadowTransforms.push_back(shadow_proj *
-                               glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
-    shadowTransforms.push_back(shadow_proj *
-                               glm::lookAt(lightPos, lightPos + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
-    shadowTransforms.push_back(shadow_proj *
-                               glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
-    shadowTransforms.push_back(shadow_proj *
-                               glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
-}
 
 void Renderer::renderScene(const Camera &cam, unsigned fboToRenderTo, const int sceneW, const int sceneH)
 {
@@ -256,31 +239,40 @@ void Renderer::renderScene(const Camera &cam, unsigned fboToRenderTo, const int 
     glBindFramebuffer(GL_FRAMEBUFFER, fboToRenderTo);
     glViewport(0, 0, sceneW, sceneH);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    for (Shader *shader: CURRENT_SCENE->m_renderBatches | std::views::keys)
+
+    const auto lights = CURRENT_SCENE->getEntitiesByComponents<LightComponent>();
+    const auto meshEnts = CURRENT_SCENE->getEntitiesByComponents<MeshComponent>();
+
+    // TODO: Move to some light system
+
+    // TODO: Material batches(or at least shader batches again)
+    for (const auto& ent: meshEnts)
     {
-        shader->use();
+        const auto* meshComp = ent->getComponent<MeshComponent>();
 
-        // Shared matrices
-        shader->setUniformMat4("u_VPMatrix", vpMat);
-        shader->setUniformMat4("u_ViewMatrix", viewMat);
-        shader->setUniformMat4("u_ProjectionMatrix", projectionMat);
-
-        // Camera uniforms
-        shader->setUniformVec3("u_CameraPosition", camPosition);
-        shader->setUniformVec3("u_ViewDirection", cam.getDirection());
-
-
-        shader->setUniformf("u_ParallaxHeightScale", parallaxScale);
-
-        // TODO: Batch per material
-        for (const auto &[modelSet, entity]: CURRENT_SCENE->m_renderBatches[shader])
+        for (const auto& modelSet: meshComp->m_model->getMeshes())
         {
-            Material *mat = ASSET_MANAGER->materials.get(modelSet->mat);
+           const Material* mat = ASSET_MANAGER->materials.get(modelSet.mat);
+           const Shader* shader = ASSET_MANAGER->shaders.get(mat->getShader());
+
+            shader->use();
 
 
-            shader->setUniformMat4("m_Model", entity->getGlobalTransformMatrix());
-            shader->setUniformMat4("m_MVP", vpMat * entity->getGlobalTransformMatrix());
+            // Shared matrices
+            shader->setUniformMat4("u_VPMatrix", vpMat);
+            shader->setUniformMat4("u_ViewMatrix", viewMat);
+            shader->setUniformMat4("u_ProjectionMatrix", projectionMat);
 
+            // Camera uniforms
+            shader->setUniformVec3("u_CameraPosition", camPosition);
+            shader->setUniformVec3("u_ViewDirection", cam.getDirection());
+
+            shader->setUniformf("u_ParallaxHeightScale", parallaxScale);
+
+            auto globalTransform = Transform::getGlobalTransform(*ent);
+            shader->setUniformMat4("m_Model", Transform::getGlobalTransform(*ent));
+
+            shader->setUniformMat4("m_MVP", vpMat * globalTransform);
 
             const auto textures = mat->getTextures();
             int textureUnit = 0;
@@ -338,8 +330,9 @@ void Renderer::renderScene(const Camera &cam, unsigned fboToRenderTo, const int 
             shader->setUniformf((materialUniformBase + "shininess").c_str(), mat->getShininess());
 
 
-            modelSet->mesh.draw();
+            modelSet.mesh.draw();
 
+            // Unbind textures
             for (int i = 0; i <= textureUnit; ++i)
             {
                 glActiveTexture(GL_TEXTURE0 + i);
@@ -404,21 +397,24 @@ void Renderer::renderScene(const Camera &cam, unsigned fboToRenderTo, const int 
 
         iconShader->setUniformVec3("u_CameraUp_WorldSpace", cameraUpWorldSpace);
 
-        for (auto &entity: CURRENT_SCENE->getEntities())
+        for (const auto& entity: CURRENT_SCENE->getEntities())
         {
-            if (entity->hasIcon())
+            for (const auto& compID : entity->getComponents() | std::views::keys)
             {
-                iconShader->use();
+                if (const auto* tex = IconRegistry::tryGetIcon(compID))
+                {
+                    iconShader->use();
 
-                iconShader->setUniformVec3("u_ObjectPosition", (glm::vec3) entity->getWorldPosition());
-                iconShader->setUniformMat4("u_ProjectionMatrix", projection);
-                iconShader->setUniformMat4("u_ViewMatrix", view);
-                iconShader->setUniformf("u_Gamma", gamma);
+                    iconShader->setUniformVec3("u_ObjectPosition", (glm::vec3) Transform::getWorldPosition(*entity));
+                    iconShader->setUniformMat4("u_ProjectionMatrix", projection);
+                    iconShader->setUniformMat4("u_ViewMatrix", view);
+                    iconShader->setUniformf("u_Gamma", gamma);
 
-                glActiveTexture(GL_TEXTURE0);
-                entity->tryGetIcon()->use();
-                iconShader->setUniformi("u_iconImage", 0);
-                Quad::draw();
+                    glActiveTexture(GL_TEXTURE0);
+                    tex->use();
+                    iconShader->setUniformi("u_iconImage", 0);
+                    Quad::draw();
+                }
             }
         }
     }
@@ -457,35 +453,72 @@ void Renderer::renderShadowMap()
     // }
 }
 
+// TODO: Pass in lights and mesh entities to avoid looking for them again
 void Renderer::renderPointMap(Scene *currentScene)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, pointShadowFBO);
     auto *pointMapShader = ASSET_MANAGER->shaders.get("pointMap");
     pointMapShader->use();
-    currentScene->setupPointMatrices(2048, 2048);
-    for (std::pair<PointLight *, PointShadow> ps: currentScene->m_pointShadows)
-    {
-        auto *light = ps.first;
-        auto &shadow = ps.second;
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadow.shadowCubemap, 0);
-        glClear(GL_DEPTH_BUFFER_BIT);
-        pointMapShader->setUniformVec3("u_LightPos", light->getWorldPosition());
-        pointMapShader->setUniformf("u_FarPlane", light->m_radius);
 
+    const auto meshEnts = currentScene->getEntitiesByComponents<MeshComponent>();
+
+    const auto lights = currentScene->getEntitiesByComponents<LightComponent>();
+    for (const auto* light: lights)
+    {
+        auto* lightComponent = light->getComponent<LightComponent>();
+        if (lightComponent->m_type != LightComponent::Type::Point) continue;
+
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, lightComponent->m_shadow.m_shadowMap, 0);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        pointMapShader->setUniformVec3("u_LightPos", light->transform->m_position);
+        pointMapShader->setUniformf("u_FarPlane", get<PointLightSettings>(lightComponent->m_settings).m_attenuationRadius);
+
+        auto mapTransforms = getPointMapMatrices(*light, m_renderWidth, m_renderHeight);
         for (int i = 0; i < 6; ++i)
         {
-            pointMapShader->setUniformMat4(shadowMatNames[i].c_str(), shadow.shadowMapTransforms[i]);
+            pointMapShader->setUniformMat4(shadowMatNames[i].c_str(), mapTransforms[i]);
         }
 
-        for (const auto &entity: CURRENT_SCENE->m_meshEnts)
+
+        for (const auto* entity: meshEnts)
         {
-            for (auto &modelSet: entity->getModel()->getMeshes())
+            const auto* meshComp = entity->getComponent<MeshComponent>();
+            for (const auto &[mesh, mat] : meshComp->m_model->getMeshes())
             {
-                pointMapShader->setUniformMat4("u_Model", entity->getGlobalTransformMatrix());
-                modelSet.mesh.draw();
+                pointMapShader->setUniformMat4("u_Model", Transform::getTransformMatrix(*(entity->transform)));
+                mesh.draw();
             }
         }
     }
+
+}
+
+std::array<glm::mat4, 6> Renderer::getPointMapMatrices(const Entity& light, int w, int h)
+{
+    std::array<glm::mat4, 6> out{};
+    const auto* lightComponent = light.getComponent<LightComponent>();
+    if (!lightComponent) return out;
+
+    float aspect = (float)w / (float)h;
+    float near = 1.0f;
+    glm::mat4 shadow_proj = glm::perspective(glm::radians(90.0f), aspect, near, std::get<PointLightSettings>(lightComponent->m_settings).m_attenuationRadius);
+
+    glm::vec3 lightPos = light.transform->m_position;
+    out[0] = shadow_proj *
+    glm::lookAt(lightPos, lightPos + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0));
+    out[1] = shadow_proj *
+        glm::lookAt(lightPos, lightPos + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0));
+    out[2] = shadow_proj *
+        glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
+    out[3] = shadow_proj *
+        glm::lookAt(lightPos, lightPos + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0));
+    out[4] = shadow_proj *
+        glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0));
+    out[5] = shadow_proj *
+        glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0));
+
+    return out;
 }
 
 

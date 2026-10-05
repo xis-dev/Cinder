@@ -17,7 +17,7 @@ Handle<Shader> Material::getShader() const
 	return m_shader;
 }
 
-std::vector<Handle<Texture>> Material::getTextures()
+std::vector<Handle<Texture>> Material::getTextures() const
 {
 	return m_textures;
 }
@@ -58,7 +58,7 @@ void Material::setShininess(float shininess)
 	m_shininess = shininess;
 }
 
-float Material::getDiffuse()
+float Material::getDiffuse() const
 {
 	return m_diffuseStrength;
 }

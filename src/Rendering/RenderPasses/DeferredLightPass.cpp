@@ -7,6 +7,7 @@
 #include "Camera.h"
 #include "GBuffer.h"
 #include "Quad.h"
+#include "Components/LightComponent.h"
 
 
 DeferredLightPass::DeferredLightPass(int w, int h, Shader *shader) : m_shader(shader)
@@ -89,18 +90,70 @@ void DeferredLightPass::configuredRender(const FrameContext &ctx, const SSAORend
     glBindTexture(GL_TEXTURE_2D_ARRAY, shadowPass.getOutput(0));
     m_shader->setUniformi("u_ShadowMap", 5);
 
+    const auto lights = scene->getEntitiesByComponents<LightComponent>();
+
     int pointMapStartIdx = 6;
-    int loopIdx = 0;
-    for (auto &[shadowCubemap, shadowMapTransforms]: scene->m_pointShadows | std::views::values)
+
+    int dirCount{};
+    int pointCount{};
+    int spotCount{};
+
+    for (const auto& light: lights)
     {
-        glActiveTexture(GL_TEXTURE0 + pointMapStartIdx + loopIdx);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, shadowCubemap);
-        m_shader->setUniformi(("t_PointMaps[" + std::to_string(loopIdx) + "]").c_str(),
-                              pointMapStartIdx + loopIdx);
-        ++loopIdx;
+        const auto* lightComp = light->getComponent<LightComponent>();
+
+        switch (lightComp->m_type)
+        {
+            case LightComponent::Type::Directional: {
+
+                const std::string dirUniformStr{ "u_DirectionalLights[" + std::to_string(dirCount++) + "]." };
+
+                m_shader->setUniformVec3((dirUniformStr + "direction").c_str(), glm::normalize(get<DirectionalLightSettings>(lightComp->m_settings).m_direction));
+                m_shader->setUniformVec3((dirUniformStr + "color").c_str(), get<DirectionalLightSettings>(lightComp->m_settings).m_color);
+                m_shader->setUniformf((dirUniformStr + "intensity").c_str(), get<DirectionalLightSettings>(lightComp->m_settings).m_intensity);
+                break;
+            }
+
+            case LightComponent::Type::Point: {
+                glActiveTexture(GL_TEXTURE0 + pointMapStartIdx + pointCount);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, lightComp->m_shadow.m_shadowMap);
+                m_shader->setUniformi(("t_PointMaps[" + std::to_string(pointCount) + "]").c_str(),
+                                      pointMapStartIdx + pointCount);
+
+                const std::string pointUniformStr{ "u_PointLights[" + std::to_string(pointCount) + "]." };
+
+                m_shader->setUniformf((pointUniformStr + "radius").c_str(), get<PointLightSettings>(lightComp->m_settings).m_attenuationRadius);
+
+                m_shader->setUniformVec3((pointUniformStr + "color").c_str(), get<PointLightSettings>(lightComp->m_settings).m_color);
+                m_shader->setUniformf((pointUniformStr + "intensity").c_str(), get<PointLightSettings>(lightComp->m_settings).m_intensity);
+                m_shader->setUniformVec3((pointUniformStr + "position").c_str(), Transform::getWorldPosition(*light));
+
+                ++pointCount;
+
+                break;
+            }
+
+            case LightComponent::Type::Spot: {
+                const std::string spotUniformStr = "u_SpotLights[" + std::to_string(spotCount++) + "].";
+
+                m_shader->setUniformf((spotUniformStr + "innerCutoff").c_str(), get<SpotLightSettings>(lightComp->m_settings).m_innerCutoff);
+                m_shader->setUniformf((spotUniformStr + "outerCutoff").c_str(), get<SpotLightSettings>(lightComp->m_settings).m_outerCutoff);
+
+                m_shader->setUniformVec3((spotUniformStr + "color").c_str(), get<SpotLightSettings>(lightComp->m_settings).m_color);
+                m_shader->setUniformf((spotUniformStr + "intensity").c_str(), get<SpotLightSettings>(lightComp->m_settings).m_intensity);
+
+                m_shader->setUniformVec3((spotUniformStr + "direction").c_str(), glm::normalize(get<SpotLightSettings>(lightComp->m_settings).m_direction));
+                m_shader->setUniformVec3((spotUniformStr + "position").c_str(), Transform::getWorldPosition(*light));
+
+                break;
+            }
+        }
     }
 
-    scene->illuminate(*m_shader);
+    m_shader->setUniformi("u_DirLightCount", dirCount);
+    m_shader->setUniformi("u_PointLightCount", pointCount);
+    m_shader->setUniformi("u_SpotLightCount", spotCount);
+
 
     m_shader->setUniformi("u_CascadeMapCount", shadowPass.numberOfSplits);
     for (int i = 0; i < shadowPass.numberOfSplits; ++i)

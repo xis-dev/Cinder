@@ -21,15 +21,15 @@ public:
 	}
 	void addTexture(Handle<Texture> texture);
 	
-	Handle<Shader> getShader() const;
-	std::vector<Handle<Texture>> getTextures();
+	[[nodiscard]] Handle<Shader> getShader() const;
+	[[nodiscard]] std::vector<Handle<Texture>> getTextures() const;
 	void setColor(glm::vec3 color);
 	void setColor(float r, float g, float b);
 	void setAmbience(float ambientStr);
 	void setDiffuse(float diffuseStr);
 	void setSpecular(float specularStr);
 	void setShininess(float shininess);
-	float getDiffuse();
+	float getDiffuse() const;
 	float getShininess() const;
 	float getSpecular() const;
 	float getAmbience() const;

@@ -1,9 +1,5 @@
 #pragma once
 
-
-#include <format>
-#include <memory>
-
 #include "Math/Vec3.h"
 #include "Delegate.h"
 #include "AABB.h"
@@ -12,45 +8,40 @@
 
 #include <string>
 #include <vector>
+#include <format>
+#include <memory>
+#include <iostream>
+#include <unordered_map>
 
 #include "CinUtility.h"
 #include "Component.h"
+#include "Components/Transform.h"
 
 class Scene;
 
 class Shader;
 class Texture;
 
-typedef uint32_t ComponentTypeID;
-
-namespace ComponentUtil
+class Entity
 {
-	inline ComponentTypeID nextComponentID{};
 
-	template<CinUtility::DerivedConcept<Component> T>
-	ComponentTypeID getComponentID()
-	{
-		static ComponentTypeID id = nextComponentID++;
-		return id;
-	}
-}
-
-class Entity 
-{
 	friend Scene;
 	static constexpr size_t MAX_NAME_LENGTH = 32;
 
 
 public:
+	Entity();
 	virtual ~Entity() = default;
 
 private:
-	std::string m_tag;
+	std::string m_tag{};
 	Entity* m_parent {nullptr};
 	std::vector<Entity*> m_children;
 	std::unordered_map<ComponentTypeID, std::unique_ptr<Component>> m_components;
 
 public:
+	Transform* transform{nullptr};
+
 	template<CinUtility::DerivedConcept<Component> T, typename ... TArgs>
 	T* addComponent(TArgs&&... args);
 
@@ -63,6 +54,7 @@ public:
 	template<CinUtility::DerivedConcept<Component> T>
 	[[nodiscard]] bool hasComponent() const;
 
+	const std::unordered_map<ComponentTypeID, std::unique_ptr<Component>> & getComponents() const;
 protected:
 	//AABB m_boundingBox;
 
@@ -75,33 +67,22 @@ protected:
 
 	bool m_pendingDestruction{};
 
-	// Returns success state boolean
 	void findAndRemoveChild(Entity* child);
 public:
 
-	void setParent(Entity* parent);
+	void setParent(Entity& parent);
 	Entity* getParent() const;
-	void addChild(Entity* child);
+	void addChild(Entity& child);
 	void removeParent();
-	void reparentAllChildren(Entity* newParent);
+	void reparentAllChildren(Entity& newParent);
 
 	bool isPendingDestruction();
 
-	[[nodiscard]] std::vector<Entity*> getChildren() const;
-	[[nodiscard]] glm::vec3 getRelativePosition() const { return m_position;}
-	[[nodiscard]] glm::vec3 getWorldPosition() const;
-	[[nodiscard]] glm::vec3 getRelativeRotationAxis() const { return m_currentRotationAxis; }
-	float getRelativeRotationAngle() const{ return m_currentRotationAngle; }
-
-	void setPosition(glm::vec3 pos) { m_position = pos; }
-	void setPosition(float p) { m_position = glm::vec3(p); }
-
-
-	void setRotation(glm::vec3 axis, float angle);
+	std::vector<Entity *> getChildren() const;
 
 	void setTag(const std::string& tag);
 
-	const char* getTag() const;
+	std::string getTag() const;
 
 	virtual void setIcon(Texture& icon);
 
@@ -113,11 +94,6 @@ public:
 
 	virtual void imguiDraw();
 
-	virtual glm::mat4 getRelativeTransformMatrix();
-
-	// Transform matrix globally after parent transformation
-	virtual glm::mat4 getGlobalTransformMatrix();
-
 	Delegate<Entity*> OnEntityDestroyed_WithEntity;
 	Delegate<> OnEntityDestroyed;
 
@@ -128,23 +104,18 @@ protected:
 template<CinUtility::DerivedConcept<Component> T, typename ... TArgs>
 T * Entity::addComponent(TArgs &&...args){
 
-	std::unique_ptr<Component> newComponent = std::make_unique<T>(std::forward<TArgs>(args)...);
-	T* rawPtr = newComponent.get();
+	const auto& it = m_components.find(ComponentUtil::getComponentID<T>());
 
-	try {
-		if (!m_components.insert({ComponentUtil::getComponentID<T>(), std::move(newComponent)}))
-		{
-			std::cout << std::format("ENTITY_LOG: Attempt to add component {ID: %i} to entity '%s' with already exising component, request will be ignored.\n", ComponentUtil::getComponentID<T>(), m_tag);
-
-			// Return actual existing component
-			return m_components[ComponentUtil::getComponentID<T>()];
-		}
-	}
-	catch (const std::bad_alloc& badAlloc) {
-		std::cout << std::format("Caught exception while inserting component {ID %i} to entity '%s': ", ComponentUtil::getComponentID<T>(), m_tag) << badAlloc.what() << "\n";
-
+	if (it != m_components.end())
+	{
+		std::cout << std::format("ENTITY_LOG: Attempt to add component 'ID: {}' to entity '{}' with already exising component, request will be ignored.\n", ComponentUtil::getComponentID<T>(), m_tag);
 		return nullptr;
 	}
+
+	std::unique_ptr<T> newComponent = std::make_unique<T>(std::forward<TArgs>(args)...);
+	T* rawPtr = newComponent.get();
+
+	m_components.insert({ComponentUtil::getComponentID<T>(), std::move(newComponent)});
 
 	return rawPtr;
 

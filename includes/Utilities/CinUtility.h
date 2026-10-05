@@ -4,6 +4,6 @@
 
 namespace CinUtility
 {
-    template<typename Base, typename T>
+    template<typename T, typename Base>
     concept DerivedConcept = std::derived_from<T, Base>;
 }

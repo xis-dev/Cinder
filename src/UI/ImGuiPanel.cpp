@@ -107,7 +107,7 @@ renderEntityHierarchy(Entity *entity)
     if (entity->getChildren().empty()) flags |= ImGuiTreeNodeFlags_Bullet; // Bullet point on end components
     if (entity == m_selectedEntity) flags |= ImGuiTreeNodeFlags_Selected;
 
-    bool open = ImGui::TreeNodeEx(entity->getTag(), flags);
+    bool open = ImGui::TreeNodeEx(entity->getTag().c_str(), flags);
 
     if (ImGui::IsItemClicked())
     {
