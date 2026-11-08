@@ -31,13 +31,14 @@ protected:
     glm::vec2 panelSize{};
 
     bool beginFrame();
-    virtual void update();
+    virtual void update(bool captureInput);
     void endFrame();
 public:
     const std::string& getName() const;
     ImGuiWindowFlags getFlags() const;
     bool isOpen() const;
     bool canRender() const;
+    bool cursorIsOver() const;
     void togglePanelRendering();
     void setFlags(ImGuiWindowFlags flags);
     void addFlags(ImGuiWindowFlags flags);
@@ -57,7 +58,7 @@ public:
     void entityDestroyed(Entity* entity);
 
 protected:
-    void update() override;
+    void update(bool captureInput) override;
 };
 
 class SceneHierarchyPanel: public ImGuiPanel
@@ -75,7 +76,7 @@ public:
 private:
     void renderEntityHierarchy(Entity* entity);
 protected:
-    virtual void update() override;
+    virtual void update(bool captureInput) override;
 
     Entity* getSelectedEntity();
 };
@@ -100,7 +101,7 @@ public:
     }
 
 protected:
-    virtual void update() override;
+    virtual void update(bool captureInput) override;
 };
 
 class RenderConfigPanel: public ImGuiPanel
@@ -111,7 +112,7 @@ public:
         : ImGuiPanel(name, flags, open), RENDERER(renderer)
     {}
 
-    void update() override;
+    void update(bool captureInput) override;
 };
 
 

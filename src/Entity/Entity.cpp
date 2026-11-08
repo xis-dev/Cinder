@@ -91,45 +91,12 @@ std::string Entity::getTag() const
 
 }
 
-
-
-void Entity::setIcon(Texture& icon)
-{
-	m_hasIcon = true;
-	m_icon = &icon;
-}
-
-bool Entity::hasIcon()
-{
-	return m_hasIcon;
-}
-
-Texture* Entity::tryGetIcon()
-{
-	if (!m_icon)
-	{
-		std::cerr << "ENTITY:: Current entity named: " << m_tag << " has no icon.\n";
-		return nullptr;
-	}
-	return m_icon;
-}
-
-const Texture* Entity::tryGetIcon() const
-{
-	if (!m_icon)
-	{
-		std::cerr << "ENTITY:: Current entity named: " << m_tag << " has no icon.\n";
-		return nullptr;
-	}
-	return m_icon;
-}
-
 void Entity::imguiDraw()
 {
-	ImGui::InputText("Entity Name", m_tag.data(), MAX_NAME_LENGTH);
-	ImGui::DragFloat3("Position", &m_position.x, 0.5f);
-	ImGui::DragFloat3("Rotation Axis", &m_currentRotationAxis.x, 0.1f);
-	ImGui::DragFloat("Angle", &m_currentRotationAngle);
+	ImGui::InputText("Entity Name", m_tag.data(), 32);
+	ImGui::DragFloat3("Position", &transform->m_position.x, 0.5f);
+	ImGui::DragFloat3("Rotation Axis", &transform->m_rotationAxis.x, 0.1f);
+	ImGui::DragFloat("Angle", &transform->m_rotationAngle);
 }
 
 void Entity::OnDestroyed()

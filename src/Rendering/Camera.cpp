@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "src/Core/Window.h"
 
 
 glm::mat4 Camera::getProjectionMatrix() const
@@ -99,6 +100,7 @@ std::vector<glm::vec3> Camera::getFrustumCorners(const glm::vec3& pos,	const glm
 
 void Camera::processKeyboardInput(GLFWwindow* window, float deltaTime)
 {
+	// TODO: Bind to input keys
 	float speed = m_speed;
 	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
 	{
@@ -141,7 +143,7 @@ void Camera::processKeyboardInput(GLFWwindow* window, float deltaTime)
 	setViewMatrix();
 }
 
-void Camera::processMouseInput(GLFWwindow* window, float xoffset, float yoffset, float zoomAmount, float sensitivity)
+void Camera::processMouseInput(float xoffset, float yoffset, float zoomAmount, float sensitivity)
 {
 	m_yaw += (xoffset * sensitivity);
 	m_pitch += (yoffset * sensitivity);
@@ -183,5 +185,4 @@ glm::vec3 Camera::getDirection() const
 {
 	return glm::normalize(m_direction);
 }
-
 

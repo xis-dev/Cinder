@@ -9,8 +9,10 @@
 #include <array>
 #include <unordered_map>
 
+#include "FrameBuffer.h"
 
- class Scene;
+
+class Scene;
 
 class DirectionalShadowPass: public IRenderPassConfigurer<const Camera&, Scene*>
 {

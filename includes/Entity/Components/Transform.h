@@ -17,6 +17,7 @@ struct Transform: Component {
 
     static glm::vec3 getWorldPosition(const Entity& e);
 
+    // TODO: Return Transform instead once quaternion rotations are implemented
     static glm::mat4 getGlobalTransform(const Entity& e);
 
     static glm::mat4 getTransformMatrix(const Transform& t);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "FrameBuffer.h"
 #include "RenderPass.h"
 
 class DeferredLightPass;

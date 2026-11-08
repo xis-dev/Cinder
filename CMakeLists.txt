@@ -7,7 +7,7 @@ set(CMAKE_COMPILE_WARNING_AS_ERROR OFF)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
@@ -70,7 +70,7 @@ set(PROJECT_INCLUDE_DIR
 
 set (INCLUDE_DIRS
     ${PROJECT_INCLUDE_DIR}
-    includes/Engine
+        includes/Core
     includes/Entity
     includes/Graphics
     includes/Math
@@ -118,7 +118,7 @@ set(PROJECT_SOURCES
      ${MATH}
      src/main.cpp
 
-     src/Engine/Engine.cpp
+        src/Core/Engine.cpp
 
      src/Entity/Entity.cpp
     # src/Entity/LightEntity.cpp
@@ -137,7 +137,7 @@ set(PROJECT_SOURCES
 
      src/main.cpp
 
-     src/Engine/Engine.cpp
+        src/Core/Engine.cpp
 
      src/Entity/Entity.cpp
      #src/Entity/LightEntity.cpp
@@ -169,6 +169,12 @@ set(PROJECT_SOURCES
         includes/Entity/Components/Transform.cpp
         includes/Entity/Components/Transform.h
         includes/Entity/Components/LightComponent.cpp
+        src/Core/Input.cpp
+        src/Core/Input.h
+        src/Core/Window.cpp
+        src/Core/Window.h
+        includes/Utilities/ScopedBinding.cpp
+        includes/Utilities/ScopedBinding.h
 )
 
 set(IMGUI_SOURCES

@@ -1,20 +1,25 @@
 #include "Scene.h"
-#include "Resources/Shader.h"
-
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/matrix.hpp>
-#include <glm/ext/matrix_clip_space.hpp>
-
-#include "imgui.h"
 
 #include <algorithm>
+
+Entity * Scene::createEntity(const std::string &name)
+{
+	auto entity = std::make_unique<Entity>();
+	Entity* rawPtr = entity.get();
+	rawPtr->setTag(name);
+	RootEntity->addChild(*rawPtr);
+
+	m_entities.push_back(std::move(entity));
+
+	return rawPtr;
+}
 
 Entity * Scene::getRoot() const
 {
 	return RootEntity;
 }
 
-void Scene::init(AssetManager* asset_manager)
+void Scene::init(AssetManager* asset_manager, const Camera& cam)
 {
 	ASSET_MANAGER = asset_manager;
 
@@ -22,6 +27,9 @@ void Scene::init(AssetManager* asset_manager)
 	RootEntity = empty.get(); // Root entity should still point to empty
 	RootEntity->setTag("SceneRoot");
 	m_entities.push_back(std::move(empty));
+
+	m_camera = std::make_unique<Camera>(cam);
+
 }
 
 
@@ -60,6 +68,10 @@ void Scene::end()
 	}
 
 	m_entitiesPendingDestruction.clear();
+}
+
+Camera * Scene::getViewCamera() const{
+	return m_camera.get();
 }
 
 

@@ -5,7 +5,7 @@
 
 class HDRPass: public IRenderPassConfigurer<unsigned, float, const BloomPass&>
 {
-    Shader* m_shader;
+    Shader* m_shader {nullptr};
 
 public:
     FrameBuffer m_buffer;

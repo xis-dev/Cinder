@@ -1,6 +1,5 @@
 #version 330 core
 
-
 struct DirectionalLight{
     float intensity;
     vec3 direction;

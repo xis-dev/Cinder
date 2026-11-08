@@ -9,10 +9,13 @@
 #include <cmath>
 #include <vector>
 
+#include "src/Core/Window.h"
 
+// TODO: Camera Entities
 class Camera
 {
 public:
+	Camera() = default;
 	Camera(glm::vec3 position,glm::vec3 direction, float maxFov, float aspect, float movementSpeed, float nearPlane = 1.f, float farPlane = 5000.0f):
 	m_position(position),  m_direction(glm::normalize(direction)),m_maxFov(maxFov), m_currentFov(maxFov),
 	m_aspectRatio(aspect), m_nearPlane(nearPlane), m_farPlane(farPlane), m_speed(movementSpeed)
@@ -58,7 +61,7 @@ public:
 
 public:
 	void processKeyboardInput(GLFWwindow* window, float deltaTime);
-	void processMouseInput(GLFWwindow* window, float xoffset, float yoffset, float zoomAmount, float sensitivity = 0.1f);
+	void processMouseInput(float xoffset, float yoffset, float zoomAmount, float sensitivity = 0.1f);
 	glm::mat4 getProjectionMatrix() const;
 	glm::mat4 getViewMatrix() const;
 	glm::vec3 getPosition() const;

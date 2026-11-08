@@ -16,12 +16,16 @@ bool ImGuiPanel::canRender() const
     return shouldRender;
 }
 
+bool ImGuiPanel::cursorIsOver() const {
+
+}
+
 bool ImGuiPanel::beginFrame()
 {
   return ImGui::Begin(m_name.c_str(), &m_open, m_flags);
 }
 
-void ImGuiPanel::update()
+void ImGuiPanel::update(bool captureInput)
 {
     ImVec2 size = ImGui::GetContentRegionAvail();
     panelSize = {size.x, size.y};
@@ -63,7 +67,7 @@ void ImGuiPanel::render()
     if (!shouldRender) return;
     if (beginFrame())
     {
-        update();
+        update(ImGui::IsWindowHovered());
     }
     endFrame();
 }
@@ -89,9 +93,9 @@ void PropertiesPanel::entityDestroyed(Entity *entity)
     }
 }
 
-void PropertiesPanel::update()
+void PropertiesPanel::update(bool captureInput)
 {
-    ImGuiPanel::update();
+    ImGuiPanel::update(captureInput);
     if (m_selectedEntity)
     {
         m_selectedEntity->imguiDraw();
@@ -139,9 +143,9 @@ renderEntityHierarchy(Entity *entity)
     }
 }
 
-void SceneHierarchyPanel::update()
+void SceneHierarchyPanel::update(bool captureInput)
 {
-    ImGuiPanel::update();
+    ImGuiPanel::update(captureInput);
     if (ImGui::Button("Add Entity"))
     {
         if (ImGui::BeginPopup("add_entity_type"))
@@ -162,9 +166,9 @@ Entity * SceneHierarchyPanel::getSelectedEntity()
     return m_selectedEntity;
 }
 
-void RenderPanel::update()
+void RenderPanel::update(bool captureInput)
 {
-    ImGuiPanel::update();
+    ImGuiPanel::update(captureInput);
     ImVec2 viewportSize = ImGui::GetContentRegionAvail();
 
     float viewW = viewportSize.x;
@@ -188,11 +192,15 @@ void RenderPanel::update()
     ImVec2 cursorPosOffset = ImVec2(viewportSize.x - viewW, viewportSize.y - viewH) * 0.5;
     ImGui::SetCursorPos(ImGui::GetCursorPos() + cursorPosOffset);
     ImGui::Image((ImTextureID)(intptr_t)RENDERER->getFinalSceneTexture(), ImVec2(viewW, viewH), ImVec2(0, 1), ImVec2(1, 0)); // Change uv coords since y is down in opengl
+
+    if (captureInput) {
+        std::cerr << "Capture Render Panel twin.\n";
+    }
 }
 
-void RenderConfigPanel::update()
+void RenderConfigPanel::update(bool captureInput)
 {
-    ImGuiPanel::update();
+    ImGuiPanel::update(captureInput);
     // ImGui::DragFloat("Camera Speed", &camera.m_speed, 1.0f);
     // ImGui::DragFloat("Camera Far Plane", &camera.m_farPlane, 0.1f);
     // ImGui::DragFloat("Camera Near Plane", &camera.m_nearPlane, 0.01f);

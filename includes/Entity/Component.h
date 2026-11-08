@@ -18,6 +18,12 @@ namespace ComponentUtil
      template<CinUtility::DerivedConcept<Component> T>
      ComponentTypeID getComponentID()
      {
+          //static ComponentTypeID id = []()->ComponentTypeID {
+            //   ComponentTypeID i = 1 << nextComponentShift;
+              // ++nextComponentShift;
+               //return i;
+          //};
+
           static ComponentTypeID id = nextComponentID++;
           return id;
      }

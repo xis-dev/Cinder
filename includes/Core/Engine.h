@@ -1,16 +1,10 @@
 #pragma once
 
-#include <glad/glad.h>
-
 #include <GLFW/glfw3.h>
-
-
-
 
 #include "Camera.h"
 #include "Entity.h"
 
-#include "Utilities/IconRegistry.h"
 #include "Rendering/Scene.h"
 
 #include "Renderer.h"
@@ -23,6 +17,8 @@
 #include <memory>
 
 #include "../UI/CinderEditor.h"
+#include "src/Core/Input.h"
+#include "src/Core/Window.h"
 #include "UI/ImGuiPanel.h"
 
 
@@ -45,50 +41,32 @@ private:
 	static Engine* g_instance;
 
 	// Window and mouse settings
-	static GLFWwindow* m_window;
-	static int scrWidth;
-	static int scrHeight;
-	static std::string scrTitle;
-
-	static double xMouseOffset;
-	static double yMouseOffset;
-	static double scrollOffset;
-
-	static double lastXPos;
-	static double lastYPos;
+	std::unique_ptr<Window> m_window{};
 
 	static bool shiftLock;
-	static bool firstMouseInput;
 
 	double m_lastFrameTime{};
 	double m_deltaTime{};
 
 	std::unique_ptr<Scene> m_currentScene{std::make_unique<Scene>()};
-	std::unique_ptr<Renderer> renderer{std::make_unique<Renderer>()};
+	std::unique_ptr<Renderer> m_renderer;
 	std::unique_ptr<AssetManager> m_assetManager{std::make_unique<AssetManager>()};
+	// TODO: Remove and replace with FileLoader
 	std::unique_ptr<ModelLoader> m_modelLoader{std::make_unique<ModelLoader>(m_assetManager.get())};
 	std::unique_ptr<CinderEditor> m_editor{std::make_unique<CinderEditor>()};
+	std::unique_ptr<Input> m_inputSystem;
 
 
 	static std::unique_ptr<FileLoader> m_FileLoader;
 
-	std::map<float, MeshEntity*> transparentObj{};
-	Camera camera = Camera( glm::vec3(0.0f, 10.0f, -30.0f),glm::vec3(0.0f, 0.0f, 1.0f), 45.0f, static_cast<float>(scrWidth) /(scrHeight), 50.0f, 0.1, 2000.0f);
 
-
-	 void init(GLFWwindow*& window);
+	 void init(int w, int h, const std::string &title);
 	// TODO: proper system into class setup
 	 void sRendering();
 	 void sInput();
 	 void deltaTimeUpdate();
 
-	  void imguiInit();
-	 void imguiUpdate();
-	void imguiRenderScene();
-
-	 void imguiRender();
-
-	 Handle<Model> loadModel(const std::string& file);
+	 Handle<Model> loadModel(const std::string& file) const;
 
 	void createTextures();
 	void createShaders();
@@ -119,7 +97,9 @@ private:
 	static void scrollCallback(GLFWwindow* window, double xOffset, double yOffset);
 	static void fileDropCallback(GLFWwindow* window, int count, const char** paths);
 public:
-	 void run(const int w, const int h, const std::string& title);
+
+	void run(const int w, const int h, const std::string& title);
+	void cleanup();
 
 	static Engine* get() {return g_instance;}
 
@@ -130,7 +110,7 @@ public:
 	static Delegate<GLFWwindow*, int, int> OnWindowResized;
 	static Delegate<GLFWwindow*> OnWindowClosed;
 
-	 ~Engine();
+	 ~Engine() = default;
 
 };
 

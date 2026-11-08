@@ -90,7 +90,6 @@ void DeferredLightPass::configuredRender(const FrameContext &ctx, const SSAORend
     glBindTexture(GL_TEXTURE_2D_ARRAY, shadowPass.getOutput(0));
     m_shader->setUniformi("u_ShadowMap", 5);
 
-    const auto lights = scene->getEntitiesByComponents<LightComponent>();
 
     int pointMapStartIdx = 6;
 
@@ -98,7 +97,7 @@ void DeferredLightPass::configuredRender(const FrameContext &ctx, const SSAORend
     int pointCount{};
     int spotCount{};
 
-    for (const auto& light: lights)
+    for (const auto& light: ctx.lights)
     {
         const auto* lightComp = light->getComponent<LightComponent>();
 

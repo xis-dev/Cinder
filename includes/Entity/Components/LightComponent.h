@@ -23,7 +23,7 @@ struct DirectionalLightSettings: LightSettings
 
 struct PointLightSettings: LightSettings
 {
-    float m_attenuationRadius { 15.0f };
+    float m_attenuationRadius { 150.0f };
 };
 
 struct SpotLightSettings: LightSettings

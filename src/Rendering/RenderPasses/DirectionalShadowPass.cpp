@@ -72,9 +72,11 @@ void DirectionalShadowPass::configuredRender(const FrameContext &ctx, const Came
         if (lightComp->m_type == LightComponent::Type::Directional)
         {
             dirLight = lightComp;
+            break;
         }
     }
 
+    if (!dirLight) return;
     const glm::vec3& lightDir = glm::normalize(get<DirectionalLightSettings>(dirLight->m_settings).m_direction);
 
     // TODO: Should actually be the AABB of all entiies/scene but dont have AABB setup yet

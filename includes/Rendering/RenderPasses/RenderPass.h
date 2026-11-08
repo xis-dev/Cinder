@@ -1,26 +1,34 @@
 #pragma once
 
-#include "FrameBuffer.h"
 #include "imgui.h"
-#include "vec3.hpp"
 #include "ext/matrix_float4x4.hpp"
+
+#include <vector>
 
 class GBuffer;
 class Shader;
+class Entity;
 
 // TODO: Add light entities from scene to context
 struct FrameContext
 {
     GBuffer *gBuffer{nullptr};
 
-    int frameWidth;
-    int frameHeight;
+    int frameWidth{};
+    int frameHeight{};
 
-    glm::mat4 viewMatrix;
-    glm::mat4 projectionMatrix;
+    std::vector<Entity*> lights;
+    std::vector<Entity*> meshEntities;
 
-    glm::mat4 invViewMatrix;
-    glm::mat4 invProjectionMatrix;
+    glm::mat4 viewMatrix{};
+    glm::mat4 projectionMatrix{};
+
+    glm::mat4 invViewMatrix{};
+    glm::mat4 invProjectionMatrix{};
+
+    struct {
+
+    } pipelineState;
 };
 
 class RenderPass

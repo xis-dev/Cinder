@@ -3,6 +3,8 @@
 #include "FileManager.h"
 #include "AssetManager.h"
 #include "DefaultMacros.h"
+#include "Handle.h"
+#include "Material.h"
 
 #include "assimp/Importer.hpp"
 #include "assimp/scene.h"
@@ -34,7 +36,7 @@ Handle<Model> ModelLoader::loadModel(const std::string &file)
     processNode(tempModel, scene->mRootNode, scene, directory);
 	loadedMaterials.clear();
 	loadedTextures.clear();
-	return (ASSET_MANAGER->models.add(std::move(tempModel), modelName));
+	return (ASSET_MANAGER->models.addNamed(std::move(tempModel), modelName));
 }
 
 void ModelLoader::processMesh(const aiMatrix4x4& transformMat, Model& modelToLoadInto, aiMesh *mesh, const aiScene *scene, const std::string &directory)
@@ -105,7 +107,7 @@ void ModelLoader::processMesh(const aiMatrix4x4& transformMat, Model& modelToLoa
 		}
 	}
 	// Default textured shader material
-	Material tempMat{ASSET_MANAGER->shaders.getHandle(SHADER_DEFAULT_TEXTURED_LIT)};
+	Material tempMat{ASSET_MANAGER->shaders.getNamedHandle(SHADER_DEFAULT_TEXTURED_LIT)};
 	// Default 0 index means we use the empty default material
 	// Ensure we're accessing a valid material index
 
@@ -146,7 +148,7 @@ void ModelLoader::processMesh(const aiMatrix4x4& transformMat, Model& modelToLoa
 	material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuseColor);
 	tempMat.setColor({diffuseColor.r, diffuseColor.g, diffuseColor.b});
 
-	Handle<Material> matHandle = ASSET_MANAGER->materials.add(std::move(tempMat), matName);
+	Handle<Material> matHandle = ASSET_MANAGER->materials.add(std::move(tempMat));
 	loadedMaterials.insert({mesh->mMaterialIndex, matHandle});
 	modelToLoadInto.add((ModelSet{ std::move(Mesh(vertices, indices)), matHandle}));
 
@@ -191,8 +193,6 @@ std::vector<Handle<Texture>> ModelLoader::loadMaterialTextures(aiMaterial *mat, 
 		auto texStr = std::filesystem::path(str.C_Str());
 		bool skip = false;
 
-		auto& allTextures = ASSET_MANAGER->textures.getAllResources();
-		auto allNames = ASSET_MANAGER->textures.getNames();
 		for (auto& [loadedTexPath, loadedTexHandle] : loadedTextures)
 		{
 			if (std::strcmp(loadedTexPath.c_str(), texturePath.string().c_str()) == 0) // Compare loaded texture path with current texture path
@@ -208,7 +208,7 @@ std::vector<Handle<Texture>> ModelLoader::loadMaterialTextures(aiMaterial *mat, 
 			auto dot = texturePath.string().find_last_of('.');
 			std::string textureName = texturePath.string().substr(slash == std::string::npos ? 0 : slash + 1,
 				dot - (slash == std::string::npos ? 0 : slash + 1));
-			Handle<Texture> tex = ASSET_MANAGER->textures.add(Texture(texturePath.string(), textureType, true), textureName);
+			Handle<Texture> tex = ASSET_MANAGER->textures.addNamed(Texture(texturePath.string(), textureType, true), textureName);
 			loadedTextures.insert({texturePath.string(), tex});
 			ts.push_back(tex);
 		}

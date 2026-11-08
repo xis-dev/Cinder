@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Math/Vec3.h"
 #include "Delegate.h"
 #include "AABB.h"
 
@@ -22,12 +21,11 @@ class Scene;
 class Shader;
 class Texture;
 
+// TODO: Change all Entity refs back to pointers, make constructor private.
 class Entity
 {
-
+	// TODO: Should be used to allow private entity constructor but then cant use entity refs
 	friend Scene;
-	static constexpr size_t MAX_NAME_LENGTH = 32;
-
 
 public:
 	Entity();
@@ -43,6 +41,7 @@ public:
 	Transform* transform{nullptr};
 
 	template<CinUtility::DerivedConcept<Component> T, typename ... TArgs>
+	requires std::constructible_from<T, TArgs...>
 	T* addComponent(TArgs&&... args);
 
 	template<CinUtility::DerivedConcept<Component> T>
@@ -58,16 +57,8 @@ public:
 protected:
 	//AABB m_boundingBox;
 
-	glm::vec3 m_position{};
-	glm::vec3 m_currentRotationAxis{glm::vec3(0.0f, 1.0f, 0.0f)};
-	float m_currentRotationAngle{};
-
-	Texture* m_icon{};
-	bool m_hasIcon{};
-
 	bool m_pendingDestruction{};
 
-	void findAndRemoveChild(Entity* child);
 public:
 
 	void setParent(Entity& parent);
@@ -75,7 +66,7 @@ public:
 	void addChild(Entity& child);
 	void removeParent();
 	void reparentAllChildren(Entity& newParent);
-
+	void findAndRemoveChild(Entity* child);
 	bool isPendingDestruction();
 
 	std::vector<Entity *> getChildren() const;
@@ -83,14 +74,6 @@ public:
 	void setTag(const std::string& tag);
 
 	std::string getTag() const;
-
-	virtual void setIcon(Texture& icon);
-
-	bool hasIcon();
-
-	Texture* tryGetIcon();
-
-	const Texture* tryGetIcon() const;
 
 	virtual void imguiDraw();
 
@@ -102,6 +85,7 @@ protected:
 };
 
 template<CinUtility::DerivedConcept<Component> T, typename ... TArgs>
+requires std::constructible_from<T, TArgs...>
 T * Entity::addComponent(TArgs &&...args){
 
 	const auto& it = m_components.find(ComponentUtil::getComponentID<T>());

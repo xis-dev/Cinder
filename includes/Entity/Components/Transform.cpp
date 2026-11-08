@@ -1,5 +1,7 @@
 #include "Transform.h"
 
+#include <ranges>
+
 #include "Entity.h"
 
 glm::vec3 Transform::getWorldPosition(const Entity &e)

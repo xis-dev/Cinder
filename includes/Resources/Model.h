@@ -23,7 +23,14 @@ struct ModelSet {
 class Model: public Resource {
 public:
 	Model() = default;
+
+	Model(const Model&) = delete;
+	Model& operator=(const Model&) = delete;
+
 	Model(ModelSet&& set);
+
+	Model(Model&& model) noexcept;
+	Model& operator=(Model&& model) noexcept;
 
 	// Use vector of pairs instead of unordered_map
 	std::vector<ModelSet> m_meshes;
